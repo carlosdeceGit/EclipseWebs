@@ -34,7 +34,7 @@ export async function GET() {
     .join("\n");
 
   const guides = EDITORIAL_ARTICLES.map((a) => {
-    const content = a.content.es(city);
+    const content = a.content.es(city, tenant);
     return `- [${content.title}](${origin}${localePath("es", `/${a.slug}`)}): ${content.description}`;
   }).join("\n");
 

@@ -1,5 +1,6 @@
 import type { FaqItem } from "../faq";
 import type { CityWithCircumstances, Locale } from "@/lib/eclipse/types";
+import type { Tenant } from "@/lib/tenants";
 
 export type Block =
   | { type: "h2"; text: string }
@@ -23,6 +24,10 @@ export interface Article {
    * guías: no son contenido editorial.
    */
   legal?: boolean;
-  content: Record<Locale, (city: CityWithCircumstances) => ArticleContent>;
+  /**
+   * El tenant llega como segundo argumento porque las páginas legales necesitan el
+   * dominio para componer el correo de contacto. Las guías editoriales lo ignoran.
+   */
+  content: Record<Locale, (city: CityWithCircumstances, tenant: Tenant) => ArticleContent>;
   faq?: Record<Locale, FaqItem[]>;
 }

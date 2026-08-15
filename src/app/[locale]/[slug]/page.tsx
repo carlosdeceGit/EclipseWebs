@@ -29,7 +29,7 @@ export async function generateMetadata({
 
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
-  const content = article.content[locale](city);
+  const content = article.content[locale](city, tenant);
 
   return buildMetadata({
     tenant,
@@ -126,7 +126,7 @@ export default async function ArticlePage({
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
   const t = getDictionary(locale);
-  const content = article.content[locale](city);
+  const content = article.content[locale](city, tenant);
   const faqItems = article.faq?.[locale];
 
   // El anuncio va tras el primer bloque de nivel 2: el lector ya se ha enganchado

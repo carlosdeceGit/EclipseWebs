@@ -1,22 +1,19 @@
+import { LEGAL_ENTITY, contactEmail } from "@/lib/legal-entity";
 import type { Article } from "./types";
 
 /**
  * Páginas legales.
  *
- * Los datos identificativos del titular están marcados como PENDIENTE a propósito:
- * la LSSI obliga a publicar nombre o razón social, NIF, domicilio y contacto reales,
- * y eso no se puede rellenar por aproximación. Hay que completarlos antes de
- * publicar los dominios, y con más razón antes de solicitar AdSense, que revisa
- * estas páginas en la aprobación.
+ * Los datos identificativos salen de `LEGAL_ENTITY` y el correo se compone con el
+ * dominio del tenant, de modo que las cuatro webs publican la información que exige
+ * la LSSI sin duplicarla en ningún sitio.
  */
-const PENDIENTE = "[PENDIENTE: completar antes de publicar]";
-const PENDING = "[TO DO: complete before going live]";
 
 export const avisoLegal: Article = {
   slug: "aviso-legal",
   legal: true,
   content: {
-    es: (city) => ({
+    es: (city, tenant) => ({
       title: "Aviso legal",
       description: `Información legal del sitio y condiciones de uso de la guía del eclipse en ${city.name}.`,
       body: [
@@ -24,10 +21,11 @@ export const avisoLegal: Article = {
         {
           type: "ul",
           items: [
-            `Titular: ${PENDIENTE}`,
-            `NIF/CIF: ${PENDIENTE}`,
-            `Domicilio: ${PENDIENTE}`,
-            `Correo de contacto: ${PENDIENTE}`,
+            `Titular: ${LEGAL_ENTITY.name}`,
+            `${LEGAL_ENTITY.taxIdLabel.es}: ${LEGAL_ENTITY.taxId}`,
+            `Domicilio: ${LEGAL_ENTITY.address}`,
+            `Correo de contacto: ${contactEmail(tenant)}`,
+            `Sitio web: ${tenant.domain}`,
           ],
         },
         { type: "h2", text: "Objeto" },
@@ -38,7 +36,7 @@ export const avisoLegal: Article = {
         { type: "h2", text: "Exactitud de la información astronómica" },
         {
           type: "p",
-          text: "Los datos astronómicos se calculan con elementos besselianos publicados por la NASA y se validan contra fuentes oficiales, pero se ofrecen a título informativo. Para decisiones que afecten a la seguridad ocular, la referencia debe ser siempre la publicación oficial del Instituto Geográfico Nacional y las instrucciones del fabricante del filtro solar. El titular no se responsabiliza de los daños derivados de una observación solar realizada sin protección adecuada.",
+          text: "Los datos astronómicos se calculan con elementos besselianos publicados por la NASA y se validan automáticamente contra fuentes oficiales, pero se ofrecen a título informativo. Para decisiones que afecten a la seguridad ocular, la referencia debe ser siempre la publicación oficial del Instituto Geográfico Nacional y las instrucciones del fabricante del filtro solar. El titular no se responsabiliza de los daños derivados de una observación solar realizada sin protección adecuada.",
         },
         { type: "h2", text: "Contenidos de terceros" },
         {
@@ -57,7 +55,7 @@ export const avisoLegal: Article = {
         },
       ],
     }),
-    en: () => ({
+    en: (city, tenant) => ({
       title: "Legal notice",
       description: "Legal information about this site and its terms of use.",
       body: [
@@ -65,10 +63,11 @@ export const avisoLegal: Article = {
         {
           type: "ul",
           items: [
-            `Owner: ${PENDING}`,
-            `Tax ID: ${PENDING}`,
-            `Registered address: ${PENDING}`,
-            `Contact email: ${PENDING}`,
+            `Owner: ${LEGAL_ENTITY.name}`,
+            `${LEGAL_ENTITY.taxIdLabel.en}: ${LEGAL_ENTITY.taxId}`,
+            `Registered address: ${LEGAL_ENTITY.addressEn}`,
+            `Contact email: ${contactEmail(tenant)}`,
+            `Website: ${tenant.domain}`,
           ],
         },
         { type: "h2", text: "Purpose" },
@@ -79,7 +78,7 @@ export const avisoLegal: Article = {
         { type: "h2", text: "Accuracy of astronomical information" },
         {
           type: "p",
-          text: "Astronomical data is computed from Besselian elements published by NASA and validated against official sources, but is provided for information only. For decisions affecting eye safety, the reference must always be the official publications of Spain's Instituto Geográfico Nacional and the instructions supplied with your solar filter. The owner accepts no liability for harm arising from solar observation carried out without adequate protection.",
+          text: "Astronomical data is computed from Besselian elements published by NASA and validated automatically against official sources, but is provided for information only. For decisions affecting eye safety, the reference must always be the official publications of Spain's Instituto Geográfico Nacional and the instructions supplied with your solar filter. The owner accepts no liability for harm arising from solar observation carried out without adequate protection.",
         },
         { type: "h2", text: "Third-party content" },
         {
@@ -105,7 +104,7 @@ export const privacidad: Article = {
   slug: "privacidad",
   legal: true,
   content: {
-    es: () => ({
+    es: (_city, tenant) => ({
       title: "Política de privacidad",
       description: "Qué datos personales tratamos, con qué finalidad y qué derechos tienes sobre ellos.",
       body: [
@@ -114,7 +113,15 @@ export const privacidad: Article = {
           text: "Esta política explica el tratamiento de datos personales en este sitio conforme al Reglamento General de Protección de Datos (RGPD) y a la LOPDGDD.",
         },
         { type: "h2", text: "Responsable del tratamiento" },
-        { type: "ul", items: [`Responsable: ${PENDIENTE}`, `Contacto: ${PENDIENTE}`] },
+        {
+          type: "ul",
+          items: [
+            `Responsable: ${LEGAL_ENTITY.name}`,
+            `${LEGAL_ENTITY.taxIdLabel.es}: ${LEGAL_ENTITY.taxId}`,
+            `Domicilio: ${LEGAL_ENTITY.address}`,
+            `Contacto: ${contactEmail(tenant)}`,
+          ],
+        },
         { type: "h2", text: "Qué datos tratamos y por qué" },
         {
           type: "ul",
@@ -128,7 +135,7 @@ export const privacidad: Article = {
         { type: "h2", text: "Qué NO tratamos" },
         {
           type: "p",
-          text: "El localizador calcula las circunstancias del eclipse en tu posición dentro de tu propio navegador o en la petición, y no guardamos las coordenadas que introduzcas ni la ubicación que comparta tu dispositivo.",
+          text: "El localizador calcula las circunstancias del eclipse en tu posición dentro de la propia petición, y no guardamos las coordenadas que introduzcas ni la ubicación que comparta tu dispositivo.",
         },
         { type: "h2", text: "Plazos de conservación" },
         {
@@ -143,11 +150,11 @@ export const privacidad: Article = {
         { type: "h2", text: "Tus derechos" },
         {
           type: "p",
-          text: "Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a la dirección de contacto. También puedes reclamar ante la Agencia Española de Protección de Datos si consideras que el tratamiento no es conforme a la normativa.",
+          text: `Puedes ejercer los derechos de acceso, rectificación, supresión, oposición, limitación y portabilidad escribiendo a ${contactEmail(tenant)}. También puedes reclamar ante la Agencia Española de Protección de Datos si consideras que el tratamiento no es conforme a la normativa.`,
         },
       ],
     }),
-    en: () => ({
+    en: (_city, tenant) => ({
       title: "Privacy policy",
       description: "What personal data we process, why, and what rights you have over it.",
       body: [
@@ -156,7 +163,15 @@ export const privacidad: Article = {
           text: "This policy explains how personal data is processed on this site under the General Data Protection Regulation (GDPR) and Spanish data protection law.",
         },
         { type: "h2", text: "Data controller" },
-        { type: "ul", items: [`Controller: ${PENDING}`, `Contact: ${PENDING}`] },
+        {
+          type: "ul",
+          items: [
+            `Controller: ${LEGAL_ENTITY.name}`,
+            `${LEGAL_ENTITY.taxIdLabel.en}: ${LEGAL_ENTITY.taxId}`,
+            `Registered address: ${LEGAL_ENTITY.addressEn}`,
+            `Contact: ${contactEmail(tenant)}`,
+          ],
+        },
         { type: "h2", text: "What we process and why" },
         {
           type: "ul",
@@ -170,7 +185,7 @@ export const privacidad: Article = {
         { type: "h2", text: "What we do NOT process" },
         {
           type: "p",
-          text: "The locator computes eclipse circumstances for your position in your own browser or within the request, and we do not store the coordinates you enter or the location your device shares.",
+          text: "The locator computes eclipse circumstances for your position within the request itself, and we do not store the coordinates you enter or the location your device shares.",
         },
         { type: "h2", text: "Retention" },
         {
@@ -185,7 +200,7 @@ export const privacidad: Article = {
         { type: "h2", text: "Your rights" },
         {
           type: "p",
-          text: "You may exercise your rights of access, rectification, erasure, objection, restriction and portability by writing to the contact address. You may also complain to the Spanish Data Protection Agency if you consider the processing unlawful.",
+          text: `You may exercise your rights of access, rectification, erasure, objection, restriction and portability by writing to ${contactEmail(tenant)}. You may also complain to the Spanish Data Protection Agency if you consider the processing unlawful.`,
         },
       ],
     }),
@@ -271,10 +286,12 @@ export const contacto: Article = {
   slug: "contacto",
   legal: true,
   content: {
-    es: (city) => ({
+    es: (city, tenant) => ({
       title: `Contacto — ${city.name}`,
       description: `Cómo contactar para anunciarte, corregir un dato o proponer un evento del eclipse en ${city.name}.`,
       body: [
+        { type: "h2", text: "Dirección de contacto" },
+        { type: "ul", items: [`Correo: ${contactEmail(tenant)}`, `Titular: ${LEGAL_ENTITY.name}`] },
         { type: "h2", text: "Para anunciarte" },
         {
           type: "p",
@@ -290,16 +307,16 @@ export const contacto: Article = {
           type: "p",
           text: "Ayuntamientos, agrupaciones astronómicas, centros educativos y organizadores en general pueden mandarnos su convocatoria con el enlace oficial. Las actividades abiertas y gratuitas se publican sin coste.",
         },
-        { type: "h2", text: "Dirección de contacto" },
-        { type: "ul", items: [`Correo: ${PENDIENTE}`] },
       ],
     }),
-    en: (city) => {
+    en: (city, tenant) => {
       const name = city.nameEn ?? city.name;
       return {
         title: `Contact — ${name}`,
         description: `How to get in touch to advertise, correct a figure, or submit an eclipse event in ${name}.`,
         body: [
+          { type: "h2", text: "Contact address" },
+          { type: "ul", items: [`Email: ${contactEmail(tenant)}`, `Owner: ${LEGAL_ENTITY.name}`] },
           { type: "h2", text: "To advertise" },
           {
             type: "p",
@@ -315,8 +332,6 @@ export const contacto: Article = {
             type: "p",
             text: "Councils, astronomy societies, schools and organisers in general can send us their announcement with the official link. Open, free activities are published at no cost.",
           },
-          { type: "h2", text: "Contact address" },
-          { type: "ul", items: [`Email: ${PENDING}`] },
         ],
       };
     },
