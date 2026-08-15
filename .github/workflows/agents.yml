@@ -1,0 +1,57 @@
+name: Agentes
+
+on:
+  schedule:
+    # 06:15 UTC ≈ 08:15 en España. Los diarios corren antes de que empiece el
+    # tráfico de la mañana, para que lo que se publique llegue ya actualizado.
+    - cron: "15 6 * * *"
+    # Los semanales, los lunes un poco más tarde.
+    - cron: "45 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      agent:
+        description: "Nombre del agente a ejecutar (vacío = todos los diarios)"
+        required: false
+        type: string
+      dry_run:
+        description: "No escribir en la base de datos"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: agentes
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Ejecutar agentes
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.agent }}" ]; then
+            ARGS="${{ inputs.agent }}"
+          elif [ "${{ github.event.schedule }}" = "45 6 * * 1" ]; then
+            ARGS="--weekly"
+          else
+            ARGS="--daily"
+          fi
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            ARGS="$ARGS --dry"
+          fi
+          npm run agents:run -- $ARGS
