@@ -10,21 +10,21 @@ import { publicClient } from "./supabase";
  */
 
 export const DIRECTORY_CATEGORIES = [
-  { slug: "alojamiento", label: "Alojamiento", icon: "🛏️" },
-  { slug: "restauracion", label: "Bares y restaurantes", icon: "🍽️" },
-  { slug: "actividades", label: "Actividades y excursiones", icon: "🧭" },
-  { slug: "transporte", label: "Transporte y traslados", icon: "🚐" },
-  { slug: "optica-astronomia", label: "Ópticas y astronomía", icon: "🔭" },
-  { slug: "comercio", label: "Comercio local", icon: "🛍️" },
-  { slug: "servicios", label: "Otros servicios", icon: "🔧" },
+  { slug: "alojamiento", label: { es: "Alojamiento", en: "Accommodation" }, icon: "🛏️" },
+  { slug: "restauracion", label: { es: "Bares y restaurantes", en: "Bars and restaurants" }, icon: "🍽️" },
+  { slug: "actividades", label: { es: "Actividades y excursiones", en: "Activities and tours" }, icon: "🧭" },
+  { slug: "transporte", label: { es: "Transporte y traslados", en: "Transport and transfers" }, icon: "🚐" },
+  { slug: "optica-astronomia", label: { es: "Ópticas y astronomía", en: "Opticians and astronomy" }, icon: "🔭" },
+  { slug: "comercio", label: { es: "Comercio local", en: "Local shops" }, icon: "🛍️" },
+  { slug: "servicios", label: { es: "Otros servicios", en: "Other services" }, icon: "🔧" },
 ] as const;
 
 export const CLASSIFIED_CATEGORIES = [
-  { slug: "alojamiento-particular", label: "Alojamiento particular", icon: "🏠" },
-  { slug: "transporte-compartido", label: "Comparto coche o furgoneta", icon: "🚗" },
-  { slug: "material", label: "Compra-venta de material", icon: "🔭" },
-  { slug: "servicios-puntuales", label: "Servicios para esos días", icon: "🤝" },
-  { slug: "busco", label: "Busco / demando", icon: "🔎" },
+  { slug: "alojamiento-particular", label: { es: "Alojamiento particular", en: "Private accommodation" }, icon: "🏠" },
+  { slug: "transporte-compartido", label: { es: "Comparto coche o furgoneta", en: "Sharing a car or van" }, icon: "🚗" },
+  { slug: "material", label: { es: "Compra-venta de material", en: "Buying and selling gear" }, icon: "🔭" },
+  { slug: "servicios-puntuales", label: { es: "Servicios para esos días", en: "Services for those days" }, icon: "🤝" },
+  { slug: "busco", label: { es: "Busco / demando", en: "Wanted" }, icon: "🔎" },
 ] as const;
 
 export type ListingKind = "directory" | "classified";

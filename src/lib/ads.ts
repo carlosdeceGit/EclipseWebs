@@ -35,36 +35,58 @@ export function adsenseClientId(): string | null {
 export const OWN_AD_PRICING = [
   {
     id: "directorio-basico",
-    name: "Ficha básica en el directorio",
+    name: { es: "Ficha básica en el directorio", en: "Basic directory listing" },
     price: 0,
-    period: "gratis",
-    features: [
-      "Nombre, categoría, teléfono y web",
-      "Aparece en el listado de tu ciudad",
-      "Enlace externo con atributo sponsored",
-    ],
+    period: { es: "gratis", en: "free" },
+    features: {
+      es: [
+        "Nombre, categoría, teléfono y web",
+        "Aparece en el listado de tu ciudad",
+        "Enlace externo con atributo sponsored",
+      ],
+      en: [
+        "Name, category, phone and website",
+        "Appears in your city's listing",
+        "Outbound link with the sponsored attribute",
+      ],
+    },
   },
   {
     id: "directorio-destacado",
-    name: "Ficha destacada",
+    name: { es: "Ficha destacada", en: "Featured listing" },
     price: 49,
-    period: "hasta el 2 de agosto de 2027",
-    features: [
-      "Posición fija arriba del listado de tu categoría",
-      "Foto de portada y descripción larga",
-      "Enlace en la guía de la ciudad",
-      "Etiqueta visual de destacado",
-    ],
+    period: { es: "hasta el 2 de agosto de 2027", en: "until 2 August 2027" },
+    features: {
+      es: [
+        "Posición fija arriba del listado de tu categoría",
+        "Foto de portada y descripción larga",
+        "Enlace en la guía de la ciudad",
+        "Etiqueta visual de destacado",
+      ],
+      en: [
+        "Pinned to the top of your category listing",
+        "Cover photo and long description",
+        "A link from the city guide",
+        "Visual featured badge",
+      ],
+    },
   },
   {
     id: "patrocinio-ciudad",
-    name: "Patrocinio de ciudad",
+    name: { es: "Patrocinio de ciudad", en: "City sponsorship" },
     price: 390,
-    period: "hasta el 2 de agosto de 2027",
-    features: [
-      "Banner propio en la portada del dominio de tu ciudad",
-      "Mención en la guía de alojamiento y en la de eventos",
-      "Exclusividad por categoría y ciudad",
-    ],
+    period: { es: "hasta el 2 de agosto de 2027", en: "until 2 August 2027" },
+    features: {
+      es: [
+        "Banner propio en la portada del dominio de tu ciudad",
+        "Mención en la guía de alojamiento y en la de eventos",
+        "Exclusividad por categoría y ciudad",
+      ],
+      en: [
+        "Your own banner on the home page of your city's domain",
+        "A mention in the accommodation and events guides",
+        "Category exclusivity within your city",
+      ],
+    },
   },
 ] as const;

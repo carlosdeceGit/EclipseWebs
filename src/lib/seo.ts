@@ -1,51 +1,64 @@
 import type { Metadata } from "next";
 import { ECLIPSE } from "./eclipse/event";
-import { formatDuration } from "./eclipse/cities";
-import type { City } from "./eclipse/types";
+import { cityName, formatDuration, provinceName } from "./eclipse/cities";
+import type { City, CityWithCircumstances, Locale } from "./eclipse/types";
 import { tenantOrigin, type Tenant } from "./tenants";
+import { HTML_LANG, OG_LOCALE, localePath } from "@/i18n/config";
 
 /**
  * Metadatos por página.
  *
- * El título lleva siempre ciudad + fecha porque las consultas reales son del tipo
- * "eclipse Ceuta 2027 hora", y la descripción antepone el dato duro (duración,
- * hora) al reclamo, que es lo que hace que un motor generativo cite la página.
+ * El título lleva siempre ciudad y fecha porque las consultas reales son del tipo
+ * "eclipse Ceuta 2027 hora", y la descripción antepone el dato duro a cualquier
+ * reclamo, que es lo que hace que un motor generativo cite la página.
  */
 export function buildMetadata(opts: {
   tenant: Tenant;
   city: City;
+  locale: Locale;
   title: string;
   description: string;
+  /** Camino interno, sin prefijo de idioma. */
   path: string;
-  locale?: "es" | "en";
 }): Metadata {
-  const { tenant, city, title, description, path, locale = "es" } = opts;
+  const { tenant, city, locale, title, description, path } = opts;
   const origin = tenantOrigin(tenant);
-  const url = `${origin}${path}`;
+  const url = `${origin}${localePath(locale, path)}`;
   const fullTitle = `${title} | ${tenant.brand}`;
 
   return {
     metadataBase: new URL(origin),
     title: fullTitle,
     description,
-    // Sin `languages`: declarar un hreflang="en" apuntando a /en cuando esas páginas
-    // todavía no existen es peor que no declarar nada, porque Google acaba viendo
-    // alternates que devuelven 404. Se añade cuando se publique la versión inglesa.
-    alternates: { canonical: url },
+    alternates: {
+      canonical: url,
+      // Ahora sí hay versión inglesa real, así que el hreflang apunta a páginas que
+      // existen. x-default va al español, que es el idioma principal del proyecto.
+      languages: {
+        es: `${origin}${localePath("es", path)}`,
+        en: `${origin}${localePath("en", path)}`,
+        "x-default": `${origin}${localePath("es", path)}`,
+      },
+    },
     openGraph: {
       title: fullTitle,
       description,
       url,
       siteName: tenant.brand,
-      locale: locale === "es" ? "es_ES" : "en_GB",
+      locale: OG_LOCALE[locale],
       type: "website",
-      images: [{ url: `${origin}/og?city=${city.slug}`, width: 1200, height: 630, alt: title }],
+      images: [
+        {
+          url: `${origin}/og?city=${city.slug}&locale=${locale}`,
+          width: 1200,
+          height: 630,
+          alt: title,
+        },
+      ],
     },
     twitter: { card: "summary_large_image", title: fullTitle, description },
     robots: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
     other: {
-      // Señales explícitas para motores generativos y agregadores.
-      "article:published_time": new Date().toISOString(),
       "geo.position": `${city.lat};${city.lon}`,
       "geo.placename": city.name,
       "geo.region": `${city.country}-${city.province}`,
@@ -55,21 +68,29 @@ export function buildMetadata(opts: {
 
 /** Bloque JSON-LD listo para inyectar. */
 export function jsonLd(data: unknown) {
-  return {
-    __html: JSON.stringify(data).replace(/</g, "\\u003c"),
-  };
+  return { __html: JSON.stringify(data).replace(/</g, "\\u003c") };
 }
 
 /**
  * Grafo de entidades de la ciudad: el evento, el lugar y la web.
  *
- * Se emite en la home de cada dominio. Google usa `Event` para los rich results y
- * los motores generativos se apoyan en `about`/`sameAs` para desambiguar de qué
- * eclipse y de qué ciudad se habla.
+ * Se emite en la home y en las fichas de ciudad. Google usa `Event` para los rich
+ * results, y los motores generativos se apoyan en `about` y en las cifras del
+ * `description` para desambiguar de qué eclipse y de qué ciudad se habla.
  */
-export function cityGraph(tenant: Tenant, city: City) {
+export function cityGraph(tenant: Tenant, city: CityWithCircumstances, locale: Locale) {
   const origin = tenantOrigin(tenant);
-  const duration = formatDuration(city.circumstances.totalitySeconds);
+  const duration = formatDuration(city.eclipse.totalitySeconds, locale);
+  const name = cityName(city, locale);
+
+  const description =
+    locale === "es"
+      ? city.eclipse.isTotal
+        ? `El eclipse solar total del 2 de agosto de 2027 será visible desde ${name} con ${duration} de totalidad, entre las ${city.localTimes.totalityStart} y las ${city.localTimes.totalityEnd} hora local.`
+        : `El 2 de agosto de 2027 se verá un eclipse parcial desde ${name}, con un ${(city.eclipse.obscuration * 100).toFixed(0)}% del disco solar cubierto.`
+      : city.eclipse.isTotal
+        ? `The total solar eclipse of 2 August 2027 will be visible from ${name} with ${duration} of totality, between ${city.localTimes.totalityStart} and ${city.localTimes.totalityEnd} local time.`
+        : `On 2 August 2027 a partial eclipse will be visible from ${name}, with ${(city.eclipse.obscuration * 100).toFixed(0)}% of the solar disc covered.`;
 
   return {
     "@context": "https://schema.org",
@@ -79,7 +100,7 @@ export function cityGraph(tenant: Tenant, city: City) {
         "@id": `${origin}/#website`,
         url: origin,
         name: tenant.brand,
-        inLanguage: "es-ES",
+        inLanguage: HTML_LANG[locale],
         publisher: { "@id": `${origin}/#organization` },
       },
       {
@@ -90,30 +111,35 @@ export function cityGraph(tenant: Tenant, city: City) {
       },
       {
         "@type": "Event",
-        "@id": `${origin}/#eclipse`,
-        name: `Eclipse solar total del 2 de agosto de 2027 en ${city.name}`,
-        description: duration
-          ? `El eclipse solar total del 2 de agosto de 2027 será visible desde ${city.name} con ${duration} de totalidad.`
-          : `El eclipse solar total del 2 de agosto de 2027 será visible desde ${city.name}.`,
-        startDate: ECLIPSE.isoDateTimeUTC,
+        "@id": `${origin}/#eclipse-${city.slug}`,
+        name:
+          locale === "es"
+            ? `Eclipse solar total del 2 de agosto de 2027 en ${name}`
+            : `Total solar eclipse of 2 August 2027 in ${name}`,
+        description,
+        startDate: city.eclipse.partialStart?.toISOString() ?? ECLIPSE.isoDateTimeUTC,
+        endDate: city.eclipse.partialEnd?.toISOString() ?? ECLIPSE.isoDateTimeUTC,
         eventStatus: "https://schema.org/EventScheduled",
         eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
         isAccessibleForFree: true,
         location: {
           "@type": "Place",
-          name: city.name,
+          name,
           address: {
             "@type": "PostalAddress",
-            addressLocality: city.name,
-            addressRegion: city.province,
+            addressLocality: name,
+            addressRegion: provinceName(city, locale),
             addressCountry: city.country,
           },
           geo: { "@type": "GeoCoordinates", latitude: city.lat, longitude: city.lon },
         },
         about: {
           "@type": "Thing",
-          name: "Eclipse solar total del 2 de agosto de 2027",
-          sameAs: "https://es.wikipedia.org/wiki/Eclipse_solar_del_2_de_agosto_de_2027",
+          name:
+            locale === "es"
+              ? "Eclipse solar del 2 de agosto de 2027"
+              : "Solar eclipse of 2 August 2027",
+          sameAs: "https://en.wikipedia.org/wiki/Solar_eclipse_of_August_2,_2027",
         },
         organizer: { "@id": `${origin}/#organization` },
       },
@@ -133,7 +159,11 @@ export function faqGraph(items: { q: string; a: string }[]) {
   };
 }
 
-export function breadcrumbGraph(tenant: Tenant, trail: { name: string; path: string }[]) {
+export function breadcrumbGraph(
+  tenant: Tenant,
+  locale: Locale,
+  trail: { name: string; path: string }[],
+) {
   const origin = tenantOrigin(tenant);
   return {
     "@context": "https://schema.org",
@@ -142,7 +172,38 @@ export function breadcrumbGraph(tenant: Tenant, trail: { name: string; path: str
       "@type": "ListItem",
       position: i + 1,
       name: item.name,
-      item: `${origin}${item.path}`,
+      item: `${origin}${localePath(locale, item.path)}`,
     })),
+  };
+}
+
+/**
+ * Tabla de duraciones como `Dataset`.
+ *
+ * Es la forma de que un motor generativo entienda que la tabla es un conjunto de
+ * datos citable y no una lista decorativa.
+ */
+export function datasetGraph(tenant: Tenant, locale: Locale) {
+  const origin = tenantOrigin(tenant);
+  return {
+    "@context": "https://schema.org",
+    "@type": "Dataset",
+    name:
+      locale === "es"
+        ? "Circunstancias locales del eclipse del 2 de agosto de 2027 por localidad"
+        : "Local circumstances of the 2 August 2027 eclipse by location",
+    description:
+      locale === "es"
+        ? "Duración de la totalidad, horas de contacto, magnitud y altura del Sol calculadas con elementos besselianos de la NASA y validadas contra el IGN."
+        : "Length of totality, contact times, magnitude and solar altitude computed from NASA Besselian elements and validated against Spain's IGN.",
+    license: "https://creativecommons.org/licenses/by/4.0/",
+    creator: { "@id": `${origin}/#organization` },
+    distribution: [
+      {
+        "@type": "DataDownload",
+        encodingFormat: "application/json",
+        contentUrl: `${origin}/api/eclipse`,
+      },
+    ],
   };
 }

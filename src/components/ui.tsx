@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import type { Locale } from "@/lib/eclipse/types";
+import { getDictionary } from "@/i18n/dictionary";
 
 export function Section({
   title,
@@ -36,13 +38,28 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 }
 
 /**
- * Dato con etiqueta. Si `value` es null se dice explícitamente que falta el dato en
- * lugar de dejar un hueco o poner un cero, que es lo que hace que una guía pierda
- * credibilidad.
+ * Dato con etiqueta.
+ *
+ * Si `value` es null se dice explícitamente que no hay dato en lugar de dejar un
+ * hueco o poner un cero. Con el cálculo besseliano esto casi no ocurre, pero sigue
+ * pasando en las localidades sin totalidad, donde C2 y C3 no existen.
  */
-export function DataRow({ label, value, note }: { label: string; value: string | null; note?: string }) {
+export function DataRow({
+  label,
+  value,
+  note,
+  locale,
+}: {
+  label: string;
+  value: string | null;
+  note?: string;
+  locale: Locale;
+}) {
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b py-2.5 last:border-0" style={{ borderColor: "hsl(var(--border))" }}>
+    <div
+      className="flex items-baseline justify-between gap-4 border-b py-2.5 last:border-0"
+      style={{ borderColor: "hsl(var(--border))" }}
+    >
       <dt className="text-sm" style={{ color: "hsl(var(--muted))" }}>
         {label}
       </dt>
@@ -51,10 +68,10 @@ export function DataRow({ label, value, note }: { label: string; value: string |
           <span className="font-semibold tabular-nums">{value}</span>
         ) : (
           <span className="text-sm italic" style={{ color: "hsl(var(--muted))" }}>
-            pendiente de verificar
+            {getDictionary(locale).common.pending}
           </span>
         )}
-        {note && (
+        {note && value && (
           <span className="ml-2 text-xs" style={{ color: "hsl(var(--muted))" }}>
             {note}
           </span>

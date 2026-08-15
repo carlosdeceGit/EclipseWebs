@@ -1,19 +1,32 @@
 import { headers } from "next/headers";
 import { resolveTenant, tenantCity, type Tenant } from "./tenants";
-import type { City } from "./eclipse/types";
+import type { CityWithCircumstances, Locale } from "./eclipse/types";
+import { DEFAULT_LOCALE, isLocale } from "@/i18n/config";
 
 /**
  * Lee el tenant de la petición actual en un Server Component.
  *
- * El middleware ya ha dejado el host resuelto en `x-eclipse-host`, pero caemos al
- * `host` estándar para que las rutas que no pasan por el middleware (sitemap,
- * robots, handlers de API) sigan funcionando.
+ * El proxy ya ha dejado el host resuelto en `x-eclipse-host`, pero caemos al `host`
+ * estándar para que las rutas que no pasan por él (sitemap, robots, handlers de
+ * API) sigan funcionando.
  */
 export async function currentTenant(): Promise<Tenant> {
   const h = await headers();
   return resolveTenant(h.get("x-eclipse-host") ?? h.get("host"));
 }
 
-export async function currentCity(): Promise<City> {
+export async function currentCity(): Promise<CityWithCircumstances> {
   return tenantCity(await currentTenant());
+}
+
+/**
+ * Idioma de la petición.
+ *
+ * Las páginas lo reciben por parámetro de ruta; esto es para los handlers que no
+ * tienen segmento de idioma y necesitan saberlo de todos modos.
+ */
+export async function currentLocale(): Promise<Locale> {
+  const h = await headers();
+  const value = h.get("x-eclipse-locale") ?? "";
+  return isLocale(value) ? value : DEFAULT_LOCALE;
 }

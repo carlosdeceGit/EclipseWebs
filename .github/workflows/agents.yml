@@ -3,21 +3,26 @@ name: Agentes
 on:
   schedule:
     # 06:15 UTC ≈ 08:15 en España. Los diarios corren antes de que empiece el
-    # tráfico de la mañana, para que lo que se publique llegue ya actualizado.
+    # tráfico de la mañana, para que lo publicado llegue ya actualizado.
     - cron: "15 6 * * *"
-    # Los semanales, los lunes un poco más tarde.
+    # Los semanales, los lunes algo más tarde.
     - cron: "45 6 * * 1"
   workflow_dispatch:
     inputs:
       agent:
-        description: "Nombre del agente a ejecutar (vacío = todos los diarios)"
+        description: "Agente concreto (vacío = todos los diarios)"
         required: false
         type: string
       dry_run:
-        description: "No escribir en la base de datos"
+        description: "No escribir nada"
         required: false
         type: boolean
         default: false
+
+# Los agentes abren incidencias cuando algo necesita a una persona.
+permissions:
+  contents: read
+  issues: write
 
 concurrency:
   group: agentes
@@ -26,7 +31,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -37,11 +42,17 @@ jobs:
 
       - run: npm ci
 
+      # Si el cálculo del eclipse no valida, no tiene sentido que un agente audite
+      # nada contra él: se para aquí.
+      - name: Validar el cálculo del eclipse
+        run: npx tsx scripts/validate-eclipse.ts
+
       - name: Ejecutar agentes
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          AGENT_MODEL: ${{ vars.AGENT_MODEL }}
         run: |
           ARGS=""
           if [ -n "${{ inputs.agent }}" ]; then
@@ -55,3 +66,27 @@ jobs:
             ARGS="$ARGS --dry"
           fi
           npm run agents:run -- $ARGS
+
+      # El ejecutor decide qué merece una incidencia y la deja escrita; publicarla
+      # es cosa del workflow, que es quien tiene el token. Así el código de los
+      # agentes nunca maneja credenciales de GitHub.
+      - name: Abrir incidencias
+        if: always() && hashFiles('agent-issues.json') != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          node -e '
+            const fs = require("node:fs");
+            const issues = JSON.parse(fs.readFileSync("agent-issues.json", "utf8"));
+            for (const [i, issue] of issues.entries()) {
+              fs.writeFileSync(`/tmp/issue-${i}.md`, issue.body);
+              console.log(`${i}\t${issue.title}\t${(issue.labels || []).join(",")}`);
+            }
+          ' > /tmp/issues.tsv
+          while IFS=$'\t' read -r i title labels; do
+            gh issue create \
+              --repo "${{ github.repository }}" \
+              --title "$title" \
+              --body-file "/tmp/issue-$i.md" \
+              ${labels:+--label "$labels"} || true
+          done < /tmp/issues.tsv

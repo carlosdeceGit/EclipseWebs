@@ -1,27 +1,30 @@
-import { CITIES_BY_SLUG } from "./eclipse/cities";
-import type { City } from "./eclipse/types";
+import { CITIES_BY_SLUG, resolveCity } from "./eclipse/cities";
+import type { CityWithCircumstances } from "./eclipse/types";
 
 /**
  * Un tenant es un dominio de la red. Todos comparten código y despliegue; lo único
  * que cambia es la ciudad de la que hablan y el color de marca.
  *
  * Para añadir un dominio: apuntarlo a Vercel, añadir la entrada aquí y desplegar.
- * No hace falta tocar nada más.
  */
 export interface Tenant {
   /** Dominio principal, sin protocolo ni www. */
   domain: string;
-  /** Dominios que redirigen o sirven el mismo tenant (p. ej. el .es). */
+  /** Dominios que sirven el mismo tenant (el .es, el www, etc.). */
   aliases: string[];
   citySlug: string;
-  /** Nombre de marca mostrado en la cabecera. */
   brand: string;
-  /** Tono de color de acento en HSL, para diferenciar visualmente cada web. */
+  /** Tono de acento en HSL, para que cada web se distinga de un vistazo. */
   accentHsl: string;
   /** ID de AdSense propio del dominio, si se gestiona por separado. */
   adsenseClientId?: string;
 }
 
+/**
+ * Dominios en propiedad.
+ *
+ * El orden importa poco salvo para el pie de página, donde se listan como red.
+ */
 export const TENANTS: Tenant[] = [
   {
     domain: "ceutaeclipse.com",
@@ -31,53 +34,37 @@ export const TENANTS: Tenant[] = [
     accentHsl: "28 96% 56%",
   },
   {
-    domain: "melillaeclipse.com",
-    aliases: ["melillaeclipse.es", "www.melillaeclipse.com"],
-    citySlug: "melilla",
-    brand: "Melilla Eclipse",
-    accentHsl: "199 92% 52%",
-  },
-  {
-    domain: "algeciraseclipse.com",
-    aliases: ["algeciraseclipse.es", "www.algeciraseclipse.com"],
-    citySlug: "algeciras",
-    brand: "Algeciras Eclipse",
-    accentHsl: "162 84% 40%",
-  },
-  {
-    domain: "cadizeclipse.com",
-    aliases: ["cadizeclipse.es", "www.cadizeclipse.com"],
+    domain: "eclipsecadiz.com",
+    aliases: ["www.eclipsecadiz.com"],
     citySlug: "cadiz",
-    brand: "Cádiz Eclipse",
+    brand: "Eclipse Cádiz",
     accentHsl: "45 96% 52%",
   },
   {
-    domain: "tarifaeclipse.com",
-    aliases: ["tarifaeclipse.es", "www.tarifaeclipse.com"],
+    domain: "eclipsetarifa.com",
+    aliases: ["www.eclipsetarifa.com"],
     citySlug: "tarifa",
-    brand: "Tarifa Eclipse",
+    brand: "Eclipse Tarifa",
     accentHsl: "260 84% 62%",
   },
   {
-    domain: "gibraltareclipse.com",
-    aliases: ["www.gibraltareclipse.com"],
+    domain: "eclipsegibraltar.com",
+    aliases: ["www.eclipsegibraltar.com"],
     citySlug: "gibraltar",
-    brand: "Gibraltar Eclipse",
+    brand: "Eclipse Gibraltar",
     accentHsl: "0 84% 58%",
-  },
-  {
-    domain: "marbellaeclipse.com",
-    aliases: ["www.marbellaeclipse.com"],
-    citySlug: "marbella",
-    brand: "Marbella Eclipse",
-    accentHsl: "330 80% 58%",
   },
 ];
 
-/** Tenant por defecto: el portal general que agrega toda la red. */
+/**
+ * Tenant por defecto: el portal general que agrega toda la red.
+ *
+ * También es el que sirve en local y en las URLs de preview, para que un despliegue
+ * de prueba siga siendo navegable sin tocar el fichero de hosts.
+ */
 export const HUB_TENANT: Tenant = {
-  domain: "eclipseandalucia.com",
-  aliases: ["localhost:3000", "localhost", "www.eclipseandalucia.com"],
+  domain: "eclipse2027.es",
+  aliases: ["localhost:3000", "localhost", "www.eclipse2027.es"],
   citySlug: "ceuta",
   brand: "Eclipse 2027",
   accentHsl: "28 96% 56%",
@@ -89,12 +76,7 @@ for (const t of [...TENANTS, HUB_TENANT]) {
   for (const alias of t.aliases) BY_HOST.set(alias, t);
 }
 
-/**
- * Resuelve el tenant a partir del Host de la petición.
- *
- * Acepta el puerto en desarrollo y las URLs de preview de Vercel, que caen al hub
- * para que un despliegue de prueba siga siendo navegable.
- */
+/** Resuelve el tenant a partir del Host de la petición. */
 export function resolveTenant(host: string | null | undefined): Tenant {
   if (!host) return HUB_TENANT;
   const normalized = host.toLowerCase().trim();
@@ -106,15 +88,14 @@ export function resolveTenant(host: string | null | undefined): Tenant {
   );
 }
 
-/** Indica si el tenant es el portal agregador y no una web de ciudad. */
 export function isHub(tenant: Tenant): boolean {
   return tenant.domain === HUB_TENANT.domain;
 }
 
-export function tenantCity(tenant: Tenant): City {
+export function tenantCity(tenant: Tenant): CityWithCircumstances {
   const city = CITIES_BY_SLUG.get(tenant.citySlug);
   if (!city) throw new Error(`Tenant ${tenant.domain} apunta a una ciudad inexistente: ${tenant.citySlug}`);
-  return city;
+  return resolveCity(city);
 }
 
 export function tenantOrigin(tenant: Tenant): string {

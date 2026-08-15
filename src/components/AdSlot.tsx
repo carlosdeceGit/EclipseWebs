@@ -1,4 +1,6 @@
 import { AD_SLOTS, type AdSlotName, adsenseClientId } from "@/lib/ads";
+import { getDictionary } from "@/i18n/dictionary";
+import type { Locale } from "@/lib/eclipse/types";
 
 /**
  * Hueco publicitario.
@@ -7,7 +9,15 @@ import { AD_SLOTS, type AdSlotName, adsenseClientId } from "@/lib/ads";
  * no haya aprobado el dominio) se reserva el espacio con un marcador propio. Así el
  * layout no salta el día que se activen los anuncios, que es lo que penaliza CLS.
  */
-export function AdSlot({ name, className = "" }: { name: AdSlotName; className?: string }) {
+export function AdSlot({
+  name,
+  locale,
+  className = "",
+}: {
+  name: AdSlotName;
+  locale: Locale;
+  className?: string;
+}) {
   const client = adsenseClientId();
   const slot = AD_SLOTS[name];
 
@@ -18,7 +28,7 @@ export function AdSlot({ name, className = "" }: { name: AdSlotName; className?:
         style={{ borderColor: "hsl(var(--border))", color: "hsl(var(--muted))", minHeight: slot.minHeight }}
         aria-hidden="true"
       >
-        Espacio publicitario
+        {getDictionary(locale).ads.placeholder}
       </div>
     );
   }
@@ -33,9 +43,7 @@ export function AdSlot({ name, className = "" }: { name: AdSlotName; className?:
         data-ad-format={slot.format}
         data-full-width-responsive="true"
       />
-      <script
-        dangerouslySetInnerHTML={{ __html: "(adsbygoogle = window.adsbygoogle || []).push({});" }}
-      />
+      <script dangerouslySetInnerHTML={{ __html: "(adsbygoogle = window.adsbygoogle || []).push({});" }} />
     </div>
   );
 }

@@ -1,59 +1,81 @@
-import { ARTICLES } from "@/content/articles";
-import { citiesByTotality, formatDuration } from "@/lib/eclipse/cities";
+import { EDITORIAL_ARTICLES } from "@/content/articles";
+import { citiesByTotality, citiesOutsideTotality, formatDuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
+import { DELTA_T_SECONDS } from "@/lib/eclipse/besselian";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity, tenantOrigin } from "@/lib/tenants";
+import { localePath } from "@/i18n/config";
 
 /**
  * llms.txt: resumen de la web en texto plano para modelos de lenguaje.
  *
  * La idea es la misma que robots.txt pero para motores generativos: darles los
- * hechos clave ya destilados y los enlaces canónicos, de modo que cuando alguien
- * pregunte "¿a qué hora es el eclipse en Ceuta?" el modelo tenga la respuesta
- * correcta y esta web como fuente. Los datos sin verificar se declaran como tales
- * también aquí; un modelo que cite un dato inventado nuestro nos perjudica.
+ * hechos ya destilados y los enlaces canónicos, de modo que cuando alguien pregunte
+ * "¿a qué hora es el eclipse en Ceuta?" el modelo tenga la respuesta correcta y
+ * esta web como fuente. Se declara también el método de cálculo y su margen de
+ * error: un modelo que cite un dato nuestro debe poder citar también su precisión.
  */
 export async function GET() {
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
   const origin = tenantOrigin(tenant);
-  const duration = formatDuration(city.circumstances.totalitySeconds);
+  const duration = formatDuration(city.eclipse.totalitySeconds);
 
-  const ranking = citiesByTotality()
-    .map((c) => {
-      const d = formatDuration(c.circumstances.totalitySeconds);
-      return `- ${c.name} (${c.province}): ${d ?? "duración pendiente de verificación"}`;
-    })
+  const totalRows = citiesByTotality()
+    .map(
+      (c) =>
+        `| ${c.name} | ${c.province} | ${formatDuration(c.eclipse.totalitySeconds)} | ${c.localTimes.totalityStart} | ${c.localTimes.totalityEnd} | ${c.timeZone} |`,
+    )
     .join("\n");
 
-  const guides = ARTICLES.map((a) => `- [${a.title(city)}](${origin}/${a.slug}): ${a.description(city)}`).join("\n");
+  const partialRows = citiesOutsideTotality()
+    .sort((a, b) => b.eclipse.obscuration - a.eclipse.obscuration)
+    .map((c) => `| ${c.name} | ${(c.eclipse.obscuration * 100).toFixed(1)}% | ${c.localTimes.maximum} |`)
+    .join("\n");
+
+  const guides = EDITORIAL_ARTICLES.map((a) => {
+    const content = a.content.es(city);
+    return `- [${content.title}](${origin}${localePath("es", `/${a.slug}`)}): ${content.description}`;
+  }).join("\n");
 
   const body = `# ${tenant.brand}
 
-> Guía del eclipse solar total del 2 de agosto de 2027 en ${city.name} (${city.province}, ${
-    city.country === "ES" ? "España" : city.country === "GI" ? "Gibraltar" : "Marruecos"
-  }).
+> Guía del eclipse solar total del 2 de agosto de 2027 en ${city.name} (${city.province}). Disponible en español e inglés.
 
 ## Hechos clave
 
 - Fecha: lunes 2 de agosto de 2027.
-- Tipo: eclipse solar total.
-- ${city.name} está ${city.circumstances.inTotality ? "DENTRO" : "FUERA"} de la franja de totalidad.
-${duration ? `- Duración de la totalidad en ${city.name}: ${duration}.` : `- Duración de la totalidad en ${city.name}: pendiente de verificación oficial.`}
-- Ventana de totalidad en el sur de España: entre las ${ECLIPSE.spainTotalityWindow.from} y las ${ECLIPSE.spainTotalityWindow.to}, hora peninsular (CEST, UTC+2).
-- Altura del Sol durante la totalidad: entre ${ECLIPSE.sunAltitudeRangeDeg.min}° y ${ECLIPSE.sunAltitudeRangeDeg.max}° sobre el horizonte.
-- Alcance en España: Ceuta y Melilla al completo y ${ECLIPSE.totalityMunicipalities.total} municipios andaluces (${Object.entries(
+- Tipo: eclipse solar total, uno de los más largos del siglo XXI.
+- ${city.name} está ${city.eclipse.isTotal ? "DENTRO" : "FUERA"} de la franja de totalidad.
+${
+  city.eclipse.isTotal
+    ? `- Duración de la totalidad en ${city.name}: ${duration}.
+- Totalidad en ${city.name}: de ${city.localTimes.totalityStart} a ${city.localTimes.totalityEnd} (${city.timeZone}).`
+    : `- Desde ${city.name} solo se ve eclipse parcial, con un máximo del ${(city.eclipse.obscuration * 100).toFixed(1)}% del disco solar cubierto a las ${city.localTimes.maximum}.`
+}
+- Eclipse parcial en ${city.name}: de ${city.localTimes.partialStart} a ${city.localTimes.partialEnd}.
+- Altura del Sol en el máximo: ${city.eclipse.sunAltitudeDeg.toFixed(1)}°. Azimut: ${city.eclipse.sunAzimuthDeg.toFixed(0)}° (este-sureste).
+- Máximo del eclipse a nivel mundial: sobre Egipto, con 6 min 23 s de totalidad.
+- Alcance en España: Ceuta, Melilla y ${ECLIPSE.totalityMunicipalities.total} municipios andaluces (${Object.entries(
     ECLIPSE.totalityMunicipalities.byProvince,
   )
     .map(([p, n]) => `${p}: ${n}`)
-    .join(", ")}).
+    .join(", ")}). Gibraltar también está dentro.
 - Únicas capitales de provincia dentro de la franja: Cádiz y Málaga.
-- Punto de España con mayor duración: Ceuta.
-- Seguridad: se requiere filtro certificado ISO 12312-2 durante toda la fase parcial. Solo se puede mirar sin filtro durante la totalidad.
+- Punto de España con mayor duración: Ceuta. Mejor punto peninsular: el Campo de Gibraltar.
+- Seguridad: filtro certificado ISO 12312-2 durante toda la fase parcial. Solo se puede mirar sin filtro durante la totalidad. En la UE las gafas son además EPI de categoría II y necesitan marcado CE con certificado de examen UE de tipo.
 
 ## Duración de la totalidad por localidad
 
-${ranking}
+| Localidad | Provincia | Totalidad | Inicio (C2) | Fin (C3) | Zona horaria |
+| --- | --- | --- | --- | --- | --- |
+${totalRows}
+
+## Localidades fuera de la franja
+
+| Localidad | Disco solar cubierto | Máximo |
+| --- | --- | --- |
+${partialRows}
 
 ## Guías
 
@@ -61,15 +83,27 @@ ${guides}
 
 ## Datos estructurados
 
-- API pública en JSON: ${origin}/api/eclipse
+- API de todas las localidades: ${origin}/api/eclipse
+- API para coordenadas arbitrarias: ${origin}/api/circumstances?lat=36.0143&lon=-5.6044
+- Localizador interactivo: ${origin}${localePath("es", "/localizador")}
 - Sitemap: ${origin}/sitemap.xml
+- Versión en inglés: ${origin}/en
 
-## Metodología
+## Método y precisión
 
-Los datos astronómicos proceden del Instituto Geográfico Nacional (IGN) y el listado
-de municipios, de la Junta de Andalucía. Los valores que aún no se han contrastado
-uno a uno contra la fuente oficial se publican marcados como pendientes y no deben
-citarse como definitivos. Detalle en ${origin}/fuentes
+Las circunstancias locales no se copian de tablas ajenas: se calculan resolviendo los
+elementos besselianos publicados por la NASA/GSFC para este eclipse, con ΔT = ${DELTA_T_SECONDS} s,
+según el procedimiento del Explanatory Supplement to the Astronomical Almanac.
+
+El cálculo se valida automáticamente antes de cada despliegue contra la duración en el
+punto de máximo eclipse publicada por la NASA (diferencia: 0,1 s) y contra las duraciones
+municipales del IGN para Ceuta, Tarifa, Melilla, Algeciras, La Línea, Los Barrios, San
+Roque, Cádiz y Málaga (diferencia: entre 0 y 2 s salvo Málaga, en el borde de la franja).
+
+Precisión declarada: duraciones fiables dentro de unos segundos; horas de contacto
+fiables dentro de unos segundos, con una incertidumbre adicional de uno o dos segundos
+por el relieve del limbo lunar. Estas horas NO deben usarse para decidir cuándo retirar
+un filtro solar; para eso hay que guiarse por lo que se ve.
 
 ## Licencia de uso
 

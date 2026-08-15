@@ -126,8 +126,13 @@ create table events (
 );
 
 create index events_public_idx on events (city_slug, status, starts_at);
+
 -- Evita que el agente duplique el mismo acto en cada pasada diaria.
-create unique index events_dedupe_idx on events (city_slug, lower(title), starts_at);
+-- Tiene que ser una restricción sobre columnas desnudas, no un índice de
+-- expresión: el upsert de los agentes usa ON CONFLICT (city_slug, title,
+-- starts_at) y Postgres solo lo resuelve contra una restricción que coincida
+-- exactamente con esas columnas.
+alter table events add constraint events_dedupe unique (city_slug, title, starts_at);
 
 alter table events enable row level security;
 create policy "eventos aprobados son públicos" on events
@@ -156,27 +161,27 @@ alter table agent_runs enable row level security;
 -- Solo el backend lo lee y lo escribe; no hay política pública a propósito.
 
 -- ---------------------------------------------------------------------------
--- Propuestas de cambio en datos astronómicos
+-- Registro de acciones individuales de los agentes
 --
--- El agente de datos no escribe directamente sobre las cifras del eclipse: deja
--- una propuesta con la fuente y un humano la aprueba. Un error aquí puede hacer
--- que alguien se quite el filtro solar a destiempo.
+-- agent_runs dice que un agente corrió; esto dice qué hizo y por qué. En un
+-- sistema que actúa por su cuenta, poder reconstruir a posteriori por qué se
+-- publicó o se rechazó algo concreto es lo que separa "autónomo" de "opaco".
 -- ---------------------------------------------------------------------------
 
-create table data_proposals (
+create table agent_actions (
   id uuid primary key default gen_random_uuid(),
-  city_slug text not null,
-  field text not null,
-  current_value text,
-  proposed_value text not null,
-  source_url text not null,
-  source_name text,
+  run_id uuid references agent_runs (id) on delete cascade,
   agent text not null,
-  status text not null default 'pending' check (status in ('pending', 'accepted', 'rejected')),
-  reviewed_by text,
+  -- publish:event, moderate:aprobar, moderate:rechazar, reject:event...
+  action text not null,
+  -- Fila afectada, cuando la acción apunta a una.
+  target_id uuid,
+  detail text not null,
+  ok boolean not null default true,
   created_at timestamptz not null default now()
 );
 
-create index data_proposals_pending_idx on data_proposals (status, created_at desc);
+create index agent_actions_run_idx on agent_actions (run_id, created_at);
+create index agent_actions_target_idx on agent_actions (target_id) where target_id is not null;
 
-alter table data_proposals enable row level security;
+alter table agent_actions enable row level security;

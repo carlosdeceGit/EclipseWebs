@@ -1,32 +1,44 @@
 import { Badge, Card } from "./ui";
 import type { Listing } from "@/lib/db/listings";
+import type { Locale } from "@/lib/eclipse/types";
 
 /**
  * Ficha de anuncio, común a directorio y clasificados.
  *
- * Los enlaces salientes llevan `rel="sponsored nofollow"`: son enlaces
- * comerciales y marcarlos así es lo que exige Google. Marcarlos mal es
- * justo el tipo de cosa que hunde un dominio entero.
+ * Los enlaces salientes llevan `rel="sponsored nofollow"`: son enlaces comerciales
+ * y marcarlos así es lo que exige Google. Marcarlos mal es justo el tipo de cosa
+ * que hunde un dominio entero.
  */
-export function ListingCard({ listing }: { listing: Listing }) {
+export function ListingCard({ listing, locale }: { listing: Listing; locale: Locale }) {
   const isPaid = listing.tier !== "free";
 
   return (
     <Card className={`flex h-full flex-col ${isPaid ? "ring-1 ring-[hsl(var(--accent)/0.4)]" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-bold leading-snug">{listing.title}</h3>
-        {isPaid && <Badge>{listing.tier === "sponsor" ? "Patrocina" : "Destacado"}</Badge>}
+        {isPaid && (
+          <Badge>
+            {listing.tier === "sponsor"
+              ? locale === "es"
+                ? "Patrocina"
+                : "Sponsor"
+              : locale === "es"
+                ? "Destacado"
+                : "Featured"}
+          </Badge>
+        )}
       </div>
 
       <p className="mt-2 flex-1 text-sm" style={{ color: "hsl(var(--muted))" }}>
-        {listing.description.length > 220
-          ? `${listing.description.slice(0, 220)}…`
-          : listing.description}
+        {listing.description.length > 220 ? `${listing.description.slice(0, 220)}…` : listing.description}
       </p>
 
       {listing.price !== null && (
         <p className="mt-3 text-lg font-bold" style={{ color: "hsl(var(--accent))" }}>
-          {listing.price.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+          {listing.price.toLocaleString(locale === "es" ? "es-ES" : "en-GB", {
+            style: "currency",
+            currency: "EUR",
+          })}
         </p>
       )}
 
@@ -39,7 +51,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
             className="underline"
             style={{ color: "hsl(var(--accent))" }}
           >
-            Web
+            {locale === "es" ? "Web" : "Website"}
           </a>
         )}
         {listing.contact_phone && (
@@ -49,7 +61,7 @@ export function ListingCard({ listing }: { listing: Listing }) {
         )}
         {listing.contact_email && (
           <a href={`mailto:${listing.contact_email}`} className="underline" style={{ color: "hsl(var(--accent))" }}>
-            Email
+            {locale === "es" ? "Email" : "Email"}
           </a>
         )}
       </div>

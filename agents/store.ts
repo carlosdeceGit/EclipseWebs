@@ -1,10 +1,11 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { EventCandidate, ModerationCandidate } from "./guardrails";
 
 /**
  * Persistencia de los agentes.
  *
  * Usa la service role key porque escribe en tablas sin política pública. Si no está
- * configurada, todo se degrada a no-op y el agente sirve igualmente para inspeccionar
+ * configurada, todo se degrada a no-op y el agente sigue sirviendo para inspeccionar
  * resultados con --dry.
  */
 
@@ -28,7 +29,13 @@ export async function startRun(agent: string): Promise<string | null> {
 
 export async function finishRun(
   id: string | null,
-  result: { ok: boolean; summary: string; itemsCreated?: number; error?: string },
+  result: {
+    ok: boolean;
+    summary: string;
+    itemsCreated?: number;
+    itemsUpdated?: number;
+    error?: string;
+  },
 ): Promise<void> {
   const db = client();
   if (!db || !id) return;
@@ -39,80 +46,56 @@ export async function finishRun(
       ok: result.ok,
       summary: result.summary,
       items_created: result.itemsCreated ?? 0,
+      items_updated: result.itemsUpdated ?? 0,
       error: result.error ?? null,
     })
     .eq("id", id);
 }
 
-export interface ProposalInput {
-  city_slug: string;
-  field: string;
-  current_value: string | null;
-  proposed_value: string;
-  source_url: string;
-  source_name?: string;
+/**
+ * Registro de acciones individuales.
+ *
+ * `agent_runs` dice que un agente corrió; esto dice qué hizo. Es lo que permite
+ * auditar a posteriori por qué se publicó o se rechazó algo concreto, que en un
+ * sistema que actúa solo es la diferencia entre poder confiar en él o no.
+ */
+export async function logActions(
+  runId: string | null,
+  agent: string,
+  actions: { action: string; targetId?: string | null; detail: string; ok: boolean }[],
+): Promise<void> {
+  const db = client();
+  if (!db || actions.length === 0) return;
+
+  const { error } = await db.from("agent_actions").insert(
+    actions.map((a) => ({
+      run_id: runId,
+      agent,
+      action: a.action,
+      target_id: a.targetId ?? null,
+      detail: a.detail.slice(0, 2000),
+      ok: a.ok,
+    })),
+  );
+  if (error) console.error("[store] no se pudieron registrar las acciones:", error.message);
 }
 
 /**
- * Guarda propuestas de cambio en datos astronómicos.
+ * Publica eventos ya validados.
  *
- * Nunca toca el dataset: solo deja la propuesta para revisión. Las que llegan sin
- * URL de fuente se descartan aquí mismo, por si el modelo se salta su propia regla.
+ * Entran como `approved`: el agente actúa por su cuenta. Lo que los hace publicables
+ * no es una revisión humana sino que hayan pasado los guardarraíles, que exigen
+ * fuente oficial, ciudad conocida y fecha con sentido. El índice único de la tabla
+ * evita duplicados entre pasadas diarias.
  */
-export async function insertProposals(agent: string, proposals: ProposalInput[]): Promise<number> {
+export async function publishEvents(events: EventCandidate[]): Promise<number> {
   const db = client();
-  if (!db) return 0;
+  if (!db || events.length === 0) return 0;
 
-  const valid = proposals.filter((p) => p.city_slug && p.field && p.proposed_value && p.source_url);
-  if (valid.length !== proposals.length) {
-    console.warn(`[store] descartadas ${proposals.length - valid.length} propuestas sin fuente`);
-  }
-  if (valid.length === 0) return 0;
-
-  const { error, count } = await db
-    .from("data_proposals")
-    .insert(valid.map((p) => ({ ...p, agent })), { count: "exact" });
-
-  if (error) {
-    console.error("[store] propuestas fallidas:", error.message);
-    return 0;
-  }
-  return count ?? valid.length;
-}
-
-export interface EventInput {
-  city_slug: string;
-  title: string;
-  description?: string;
-  starts_at: string;
-  ends_at?: string | null;
-  venue?: string;
-  is_free?: boolean;
-  organizer?: string;
-  source_url: string;
-  source_name?: string;
-}
-
-/**
- * Publica eventos encontrados por el agente.
- *
- * Entran como `pending`: el riesgo de un evento inventado es bajo, pero una agenda
- * con actos que no existen destruye la confianza de la web igual de rápido que un
- * horario mal puesto. El índice único de la tabla evita duplicados entre pasadas.
- */
-export async function insertEvents(events: EventInput[]): Promise<number> {
-  const db = client();
-  if (!db) return 0;
-
-  const valid = events.filter((e) => e.city_slug && e.title && e.starts_at && e.source_url);
-  if (valid.length === 0) return 0;
-
-  const { error, count } = await db
-    .from("events")
-    .upsert(
-      valid.map((e) => ({ ...e, status: "pending" as const })),
-      { onConflict: "city_slug,title,starts_at", ignoreDuplicates: true, count: "exact" },
-    );
+  const { error, count } = await db.from("events").upsert(
+    events.map((e) => ({ ...e, status: "approved" as const })),
+    { onConflict: "city_slug,title,starts_at", ignoreDuplicates: true, count: "exact" },
+  );
 
   if (error) {
     console.error("[store] eventos fallidos:", error.message);
@@ -122,7 +105,9 @@ export async function insertEvents(events: EventInput[]): Promise<number> {
 }
 
 /** Anuncios a la espera de moderación, con lo mínimo para poder juzgarlos. */
-export async function pendingListings(): Promise<unknown[]> {
+export async function pendingListings(): Promise<
+  { id: string; kind: string; category: string; title: string; description: string }[]
+> {
   const db = client();
   if (!db) return [];
 
@@ -131,11 +116,49 @@ export async function pendingListings(): Promise<unknown[]> {
     .select("id, kind, category, title, description, price, contact_email, contact_phone, website, created_at")
     .eq("status", "pending")
     .order("created_at", { ascending: true })
-    .limit(50);
+    .limit(100);
 
   if (error) {
     console.error("[store] no se pudieron leer los pendientes:", error.message);
     return [];
   }
-  return data ?? [];
+  return (data ?? []) as never;
+}
+
+const STATUS_BY_DECISION = {
+  aprobar: "approved",
+  rechazar: "rejected",
+  revisar: "pending",
+} as const;
+
+/**
+ * Aplica las decisiones de moderación.
+ *
+ * "revisar" deja el anuncio como estaba pero anota el motivo, para que quien lo mire
+ * después sepa por qué el agente no se atrevió.
+ */
+export async function applyModeration(decisions: ModerationCandidate[]): Promise<number> {
+  const db = client();
+  if (!db || decisions.length === 0) return 0;
+
+  let applied = 0;
+  for (const d of decisions) {
+    const { error } = await db
+      .from("listings")
+      .update({
+        status: STATUS_BY_DECISION[d.decision],
+        moderation_note: `[agente] ${d.decision}: ${d.reason}`,
+      })
+      .eq("id", d.id)
+      // Solo se toca lo que sigue pendiente: si una persona ya decidió mientras
+      // corría el agente, su decisión manda.
+      .eq("status", "pending");
+
+    if (error) {
+      console.error(`[store] moderación fallida para ${d.id}:`, error.message);
+      continue;
+    }
+    applied++;
+  }
+  return applied;
 }

@@ -1,94 +1,119 @@
 /**
  * Catálogo de agentes.
  *
- * Cada agente es una tarea acotada con una fuente concreta y una salida concreta.
- * La regla que ordena todo el sistema: los agentes no publican datos astronómicos
- * directamente. Escriben propuestas en `data_proposals` y un humano las acepta. Un
- * dato horario mal actualizado por un agente podría hacer que alguien se quite el
- * filtro solar antes de tiempo, y eso no se arregla con un rollback.
+ * Los agentes actúan por su cuenta: publican eventos, moderan anuncios y auditan
+ * los datos sin esperar aprobación. Lo que los hace seguros no es un humano
+ * revisando cada acción, sino que cada acción esté acotada por construcción:
  *
- * Lo que sí publican solos, porque el riesgo es bajo y reversible, son eventos con
- * fuente oficial citada y avisos de contenido desactualizado.
+ *  - Solo pueden consultar los dominios de `allowedSources`.
+ *  - Solo pueden ejecutar las acciones de `capabilities`.
+ *  - Cada escritura pasa por una validación determinista en `guardrails.ts` que se
+ *    ejecuta DESPUÉS del modelo y no depende de que este se porte bien.
+ *  - Todo queda registrado en `agent_runs` y en `agent_actions`.
+ *
+ * La única excepción sigue siendo el dato astronómico. No porque desconfiemos del
+ * agente, sino porque ya no hace falta: las horas se calculan con elementos
+ * besselianos y están validadas. Por eso el agente de datos no escribe cifras,
+ * audita las nuestras contra el IGN y avisa si algo se separa de la tolerancia.
  */
 
-export type AgentOutput =
-  /** Escribe en data_proposals y espera revisión humana. */
-  | "proposal"
-  /** Publica directamente, siempre con source_url. */
-  | "publish"
-  /** Solo informa: deja un resumen en agent_runs. */
-  | "report";
+export type Capability =
+  /** Publicar eventos en la agenda. */
+  | "publish:events"
+  /** Aprobar o rechazar anuncios pendientes. */
+  | "moderate:listings"
+  /** Abrir una incidencia en GitHub cuando algo requiere intervención humana. */
+  | "report:issue"
+  /** Escribir un informe en la tabla de ejecuciones. */
+  | "report:run";
 
 export interface AgentSpec {
   name: string;
-  /** Descripción de una línea, usada en el log y en el resumen diario. */
   summary: string;
-  /** Frecuencia sugerida en cron. El workflow decide cuál ejecuta. */
   schedule: "daily" | "weekly";
-  output: AgentOutput;
-  /** Dominios que el agente puede consultar. Todo lo demás se ignora. */
+  capabilities: Capability[];
+  /** Dominios que el agente puede consultar. Vacío = no usa búsqueda web. */
   allowedSources: string[];
-  /** Instrucción que recibe el modelo. */
+  /** Tope de escrituras por ejecución. Un agente que se desboca hace poco daño. */
+  maxWrites: number;
   prompt: string;
 }
 
-const NO_INVENTAR = `
+const REGLAS = `
 REGLAS INNEGOCIABLES:
-- No inventes ningún dato. Si no encuentras una cifra en una fuente citable, di que no la has encontrado.
-- Toda afirmación numérica debe ir acompañada de la URL exacta de donde sale.
+- No inventes ningún dato. Si no lo encuentras en una fuente citable, dilo.
+- Toda afirmación debe ir acompañada de la URL exacta de donde sale.
 - Si dos fuentes se contradicen, repórtalo como conflicto en lugar de elegir una.
-- No cambies datos por "coherencia" ni redondees. Copia el valor tal cual aparece.
+- No redondees ni "corrijas" valores por coherencia. Copia lo que ponga la fuente.
 - Responde SIEMPRE con JSON válido y nada más, sin texto alrededor ni bloques de código.
+- Es correcto y esperable devolver listas vacías. Preferimos no publicar nada a publicar ruido.
 `.trim();
 
 export const AGENTS: AgentSpec[] = [
   {
-    name: "eclipse-data",
-    summary: "Contrasta las circunstancias locales del eclipse contra el IGN",
+    name: "auditor-datos",
+    summary: "Audita nuestras horas calculadas contra las tablas del IGN",
     schedule: "weekly",
-    output: "proposal",
-    allowedSources: ["eclipses.ign.es", "astronomia.ign.es", "ign.es"],
+    capabilities: ["report:issue", "report:run"],
+    allowedSources: ["eclipses.ign.es", "astronomia.ign.es", "ign.es", "eclipse.gsfc.nasa.gov"],
+    maxWrites: 5,
     prompt: `
-Eres el verificador de datos astronómicos de una red de guías sobre el eclipse solar
-total del 2 de agosto de 2027 en el sur de España.
+Eres el auditor de datos astronómicos de una red de guías sobre el eclipse solar total
+del 2 de agosto de 2027 en el sur de España.
 
-Tarea: para cada ciudad de la lista que recibes, busca en las páginas del Instituto
-Geográfico Nacional las circunstancias locales del eclipse y compáralas con los valores
-que ya tenemos.
+Nosotros NO copiamos horarios: los calculamos resolviendo los elementos besselianos de
+la NASA. Tu trabajo no es darnos datos, es comprobar que los nuestros son correctos.
 
-Para cada ciudad necesitamos: hora del primer contacto (C1), hora de inicio de la
-totalidad (C2), hora del máximo, hora de fin de la totalidad (C3), hora del último
-contacto (C4), duración de la totalidad en segundos, altura del Sol en el máximo y
-magnitud. Las horas son locales de la ciudad.
+Recibes nuestras cifras calculadas para varias localidades. Busca en las páginas del
+Instituto Geográfico Nacional las circunstancias locales publicadas para esas mismas
+localidades y compáralas con las nuestras.
 
-Devuelve JSON con esta forma:
+Devuelve JSON:
 {
-  "proposals": [
+  "comparisons": [
     {
       "city_slug": "ceuta",
-      "field": "contacts.partialStart",
-      "current_value": null,
-      "proposed_value": "09:32:15",
-      "source_url": "https://...",
-      "source_name": "IGN",
-      "confidence": "verified"
+      "field": "totalitySeconds",
+      "ours": 288.4,
+      "theirs": 288,
+      "delta": 0.4,
+      "source_url": "https://..."
     }
   ],
-  "conflicts": [ { "city_slug": "...", "field": "...", "detail": "..." } ],
-  "not_found": [ { "city_slug": "...", "field": "..." } ]
+  "discrepancies": [
+    {
+      "city_slug": "...",
+      "field": "...",
+      "ours": "...",
+      "theirs": "...",
+      "delta_seconds": 12,
+      "source_url": "https://...",
+      "severity": "alta|media|baja"
+    }
+  ],
+  "new_municipalities": [
+    { "name": "...", "province": "...", "lat": 36.1, "lon": -5.4, "source_url": "https://..." }
+  ],
+  "not_found": ["city_slug", "..."]
 }
 
-Propón solo los campos donde el valor oficial difiera del actual o donde el actual sea
-nulo. Si un valor coincide, no lo incluyas.
+Marca como discrepancia solo lo que supere 10 segundos en las horas de contacto o en la
+duración, o cualquier desacuerdo sobre si una localidad está o no en la franja de
+totalidad. Diferencias de uno o dos segundos son normales y esperadas: no las reportes
+como discrepancia, van en "comparisons".
 
-${NO_INVENTAR}
+En "new_municipalities" incluye municipios de la franja que aparezcan en las tablas
+oficiales y que no estén en la lista que te pasamos, con sus coordenadas si la fuente
+las da. Si no las da, no lo incluyas.
+
+${REGLAS}
 `.trim(),
   },
   {
     name: "eventos",
-    summary: "Busca actos oficiales anunciados alrededor del eclipse",
+    summary: "Busca y publica actos oficiales anunciados alrededor del eclipse",
     schedule: "daily",
-    output: "publish",
+    capabilities: ["publish:events", "report:run"],
     allowedSources: [
       "juntadeandalucia.es",
       "ceuta.es",
@@ -99,18 +124,27 @@ ${NO_INVENTAR}
       "aytotarifa.com",
       "marbella.es",
       "gibraltar.gov.gi",
+      "lalinea.es",
+      "sanroque.es",
+      "chiclana.es",
+      "jerez.es",
+      "ign.es",
     ],
+    maxWrites: 20,
     prompt: `
 Eres el rastreador de agenda de una red de guías sobre el eclipse solar total del
-2 de agosto de 2027 en el sur de España.
+2 de agosto de 2027 en el sur de España. Lo que publiques sale directamente en la web,
+así que el listón es alto.
 
-Tarea: busca actividades públicas anunciadas oficialmente relacionadas con el eclipse
-en las ciudades de la lista: observaciones públicas, charlas, jornadas divulgativas,
-repartos de gafas certificadas, dispositivos especiales de tráfico o transporte para
-el día del eclipse, y convocatorias de agrupaciones astronómicas.
+Busca actividades públicas anunciadas oficialmente relacionadas con el eclipse en las
+localidades de la lista: observaciones públicas, charlas, jornadas divulgativas,
+repartos de gafas certificadas, dispositivos especiales de tráfico o transporte para el
+día del eclipse, habilitación de zonas de observación, y convocatorias de agrupaciones
+astronómicas.
 
-Solo cuentan los actos con una convocatoria publicada y con URL. No incluyas rumores,
-"se espera que", ni notas de prensa que solo digan que "se está estudiando".
+Solo cuentan los actos con una convocatoria publicada y con URL propia. No incluyas
+rumores, "se espera que", ni notas de prensa que solo digan que "se está estudiando".
+Si el acto no tiene fecha concreta, no lo incluyas.
 
 Devuelve JSON:
 {
@@ -118,7 +152,7 @@ Devuelve JSON:
     {
       "city_slug": "ceuta",
       "title": "...",
-      "description": "Dos o tres frases, en español neutro, sin adjetivos publicitarios.",
+      "description": "Dos o tres frases en español neutro, sin adjetivos publicitarios.",
       "starts_at": "2027-08-02T09:30:00+02:00",
       "ends_at": null,
       "venue": "...",
@@ -130,70 +164,75 @@ Devuelve JSON:
   ]
 }
 
-Si no hay nada nuevo, devuelve {"events": []}. Es lo normal a más de un año vista y no
-es un fallo: es preferible a rellenar la agenda con ruido.
+El city_slug debe ser uno de los que te pasamos. Si el acto es de una localidad que no
+está en la lista, omítelo.
 
-${NO_INVENTAR}
+${REGLAS}
 `.trim(),
   },
   {
     name: "moderacion",
-    summary: "Preclasifica los anuncios pendientes y detecta fraude",
+    summary: "Modera los anuncios pendientes y aplica la decisión",
     schedule: "daily",
-    output: "report",
+    capabilities: ["moderate:listings", "report:run"],
     allowedSources: [],
+    maxWrites: 100,
     prompt: `
-Eres el filtro previo de moderación del tablón de clasificados de una guía del eclipse
-de 2027. Recibes anuncios en estado pendiente.
+Eres el moderador del tablón de clasificados y del directorio de una guía del eclipse
+de 2027. Recibes anuncios en estado pendiente y tu decisión se aplica directamente.
 
-Para cada uno decide una recomendación: "aprobar", "rechazar" o "revisar".
+Para cada uno decide: "aprobar", "rechazar" o "revisar".
 
-Marca para rechazar lo que sea claramente: spam, contenido no relacionado con el
-eclipse ni con la zona, reventa a precios manifiestamente abusivos de gafas de
-protección, venta de filtros solares sin mención de certificación ISO 12312-2
-(es un riesgo real para la vista, no un problema de estilo), estafas de alojamiento
-con señales típicas (precio irrisorio, prisa, pago solo por adelantado fuera de
-plataforma), o datos de contacto que no permiten verificar a nadie.
+Rechaza lo que sea claramente: spam, contenido no relacionado con el eclipse ni con la
+zona, reventa a precios manifiestamente abusivos de material de protección, venta de
+filtros solares o gafas sin mención de certificación ISO 12312-2 (es un riesgo real para
+la vista, no un problema de estilo), estafas de alojamiento con señales típicas (precio
+irrisorio, urgencia, pago solo por adelantado fuera de plataforma), datos de contacto que
+no permiten verificar a nadie, o cualquier cosa que parezca un intento de fraude.
 
-Marca "revisar" cuando dudes. No apruebes por defecto.
+Aprueba lo que sea claramente legítimo, esté relacionado con el eclipse o con servicios
+útiles en la zona, y tenga contacto verificable.
+
+Usa "revisar" siempre que dudes. Un anuncio en "revisar" no se publica y lo mira una
+persona, así que no tiene coste equivocarse hacia ahí. Aprobar un fraude sí lo tiene.
 
 Devuelve JSON:
 {
   "decisions": [
-    { "id": "uuid", "recommendation": "aprobar|rechazar|revisar", "reason": "una frase" }
+    { "id": "uuid", "decision": "aprobar|rechazar|revisar", "reason": "una frase" }
   ]
 }
 
-La recomendación no publica nada por sí sola: un humano confirma. Sé estricto.
-
-${NO_INVENTAR}
+${REGLAS}
 `.trim(),
   },
   {
-    name: "vigilancia-serp",
-    summary: "Detecta noticias y cambios de interés sobre el eclipse",
+    name: "vigilancia",
+    summary: "Detecta noticias y huecos de contenido, y abre incidencia si urge",
     schedule: "daily",
-    output: "report",
+    capabilities: ["report:issue", "report:run"],
     allowedSources: [],
+    maxWrites: 3,
     prompt: `
-Eres el vigilante editorial de una red de guías sobre el eclipse del 2 de agosto de
-2027 en el sur de España.
+Eres el vigilante editorial de una red de guías sobre el eclipse del 2 de agosto de 2027
+en el sur de España.
 
-Tarea: identifica novedades de las últimas 24-48 horas que deberían reflejarse en la
-web: anuncios institucionales, previsiones de afluencia, medidas de tráfico, aperturas
-de reservas, cambios en datos oficiales, o temas sobre los que está apareciendo mucha
-búsqueda y sobre los que aún no tenemos página.
+Identifica novedades de las últimas 24-48 horas que deberían reflejarse en la web:
+anuncios institucionales, previsiones de afluencia, medidas de tráfico, aperturas de
+reservas, cambios en datos oficiales, alertas sobre gafas falsificadas, o temas sobre los
+que está apareciendo mucha búsqueda y sobre los que aún no tenemos página.
 
 Devuelve JSON:
 {
-  "news": [ { "title": "...", "why_it_matters": "...", "source_url": "..." } ],
+  "news": [ { "title": "...", "why_it_matters": "...", "source_url": "...", "urgency": "alta|media|baja" } ],
   "content_gaps": [ { "suggested_page": "...", "rationale": "...", "target_query": "..." } ]
 }
 
-En content_gaps propón como mucho tres, y solo si son claramente útiles. Preferimos
-pocas páginas buenas a muchas mediocres.
+En content_gaps propón como mucho tres, y solo si son claramente útiles. Preferimos pocas
+páginas buenas a muchas mediocres. Marca urgency alta solo si afecta a la seguridad de
+los lectores o si un dato publicado ha quedado desmentido.
 
-${NO_INVENTAR}
+${REGLAS}
 `.trim(),
   },
 ];

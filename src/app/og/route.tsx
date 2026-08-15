@@ -16,8 +16,10 @@ export const contentType = "image/png";
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const tenant = resolveTenant(request.headers.get("host"));
+  const locale = searchParams.get("locale") === "en" ? "en" : "es";
   const city = getCity(searchParams.get("city") ?? "") ?? tenantCity(tenant);
-  const duration = formatDuration(city.circumstances.totalitySeconds);
+  const name = locale === "en" ? (city.nameEn ?? city.name) : city.name;
+  const duration = formatDuration(city.eclipse.totalitySeconds, locale);
 
   return new ImageResponse(
     (
@@ -61,10 +63,10 @@ export async function GET(request: Request) {
         />
 
         <div style={{ display: "flex", fontSize: 26, letterSpacing: 6, opacity: 0.75 }}>
-          2 DE AGOSTO DE 2027
+          {locale === "en" ? "2 AUGUST 2027" : "2 DE AGOSTO DE 2027"}
         </div>
         <div style={{ display: "flex", fontSize: 78, fontWeight: 900, lineHeight: 1.05, marginTop: 14 }}>
-          Eclipse solar total
+          {locale === "en" ? "Total solar eclipse" : "Eclipse solar total"}
         </div>
         <div
           style={{
@@ -75,10 +77,16 @@ export async function GET(request: Request) {
             color: `hsl(${tenant.accentHsl})`,
           }}
         >
-          en {city.name}
+          {locale === "en" ? `in ${name}` : `en ${name}`}
         </div>
         <div style={{ display: "flex", fontSize: 34, marginTop: 28, opacity: 0.85 }}>
-          {duration ? `${duration} de totalidad` : "Guía completa, horarios y mapas"}
+          {duration
+            ? locale === "en"
+              ? `${duration} of totality`
+              : `${duration} de totalidad`
+            : locale === "en"
+              ? `${(city.eclipse.obscuration * 100).toFixed(0)}% partial eclipse`
+              : `Eclipse parcial al ${(city.eclipse.obscuration * 100).toFixed(0)}%`}
         </div>
         <div style={{ display: "flex", fontSize: 26, marginTop: "auto", opacity: 0.6 }}>
           {tenant.domain}
