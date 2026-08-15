@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CookieSettingsLink } from "./CookieConsent";
 import { allCities } from "@/lib/eclipse/cities";
 import { TENANTS, type Tenant } from "@/lib/tenants";
 import type { CityWithCircumstances, Locale } from "@/lib/eclipse/types";
@@ -20,6 +21,12 @@ const LEGAL_LINKS: Record<Locale, [string, string][]> = {
     ["/fuentes", "Sources and method"],
     ["/anunciate", "Advertise"],
   ],
+};
+
+/** Retirar el consentimiento tiene que ser tan fácil como darlo, y estar siempre a mano. */
+const CONSENT_LABEL: Record<Locale, string> = {
+  es: "Configurar cookies",
+  en: "Cookie settings",
 };
 
 export function Header({
@@ -176,6 +183,9 @@ export function Footer({ tenant, locale }: { tenant: Tenant; locale: Locale }) {
                 </Link>
               </li>
             ))}
+            <li>
+              <CookieSettingsLink label={CONSENT_LABEL[locale]} />
+            </li>
           </ul>
         </div>
       </div>

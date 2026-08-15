@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { notFound } from "next/navigation";
 import "../globals.css";
 import { Footer, Header } from "@/components/SiteChrome";
+import { CookieConsent } from "@/components/CookieConsent";
 import { adsenseClientId } from "@/lib/ads";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity, tenantOrigin } from "@/lib/tenants";
 import { getDictionary } from "@/i18n/dictionary";
-import { HTML_LANG, LOCALES, isLocale } from "@/i18n/config";
+import { HTML_LANG, LOCALES, isLocale, localePath } from "@/i18n/config";
 
 /**
  * Layout raíz.
@@ -72,14 +72,16 @@ export default async function LocaleLayout({
         <Header tenant={tenant} city={city} locale={locale} path="/" />
         <main id="contenido">{children}</main>
         <Footer tenant={tenant} locale={locale} />
-        {adsense && (
-          <Script
-            async
-            strategy="afterInteractive"
-            crossOrigin="anonymous"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsense}`}
-          />
-        )}
+        {/*
+          El script de AdSense lo monta este componente, no el layout: mientras no
+          haya un sí explícito no se descarga nada de Google ni se instala ninguna
+          cookie de terceros. Si estuviera aquí, el banner sería decorativo.
+        */}
+        <CookieConsent
+          locale={locale}
+          adsenseClientId={adsense}
+          policyHref={localePath(locale, "/cookies")}
+        />
       </body>
     </html>
   );

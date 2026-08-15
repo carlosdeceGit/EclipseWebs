@@ -244,6 +244,24 @@ cuánto dura): es lo que copian los motores generativos.
   marcarlos mal hunde el dominio entero.
 - RLS de Supabase impide que un usuario se autoasigne nivel de pago o se autoapruebe.
 
+### Consentimiento de cookies
+
+`src/components/CookieConsent.tsx` es quien monta el script de AdSense, **no el layout**.
+Esa es la parte importante: si el script viviera en el layout, el banner sería decorativo
+y estaríamos incumpliendo igual. Verificado con navegador real: sin decisión y tras
+rechazar, cero peticiones a Google; tras aceptar, se carga.
+
+Tres cosas que exige la AEPD y que condicionan el diseño:
+
+1. **Rechazar es tan fácil como aceptar**: los dos botones tienen el mismo peso visual.
+2. **Nada no esencial antes del consentimiento.**
+3. **Retirarlo es tan fácil como darlo**: enlace permanente «Configurar cookies» en el pie.
+
+Seguir navegando no es consentir, así que el banner no se cierra con scroll ni al pulsar
+fuera. `CONSENT_VERSION` en `src/lib/consent.ts` invalida los consentimientos previos:
+**súbela al añadir cualquier finalidad o proveedor nuevo**, porque un sí para AdSense no
+cubre añadir después otra red.
+
 ---
 
 ## 7. Agentes autónomos
@@ -309,20 +327,33 @@ categoría II y necesitan **marcado CE respaldado por un certificado de examen U
 emitido por un organismo notificado. Casi todo el producto asiático que se anuncia como
 «ISO 12312-2 certified» no lo tiene.
 
-### Tres rutas
+### Proveedor: China con CE propio, sin pasar por la competencia española
 
-- **A — Distribuidor de marca certificada.** Riesgo bajo, margen bajo, se vende en semanas.
-- **B — Marca privada con fabricante europeo certificado.** Riesgo medio, margen
-  intermedio. **Probablemente el punto óptimo**, dado que quedan menos de doce meses.
-- **C — Fabricación propia desde China bajo marca propia.** Margen alto, riesgo alto,
-  requiere certificar desde cero (meses). Solo con volumen y tiempo.
+Decisión de negocio tomada: **no comprar a marcas españolas** (Eclipseando y similares),
+porque sería revender producto de un competidor directo y quedar atado a su precio.
 
-Fabricantes europeos ya certificados: Absolute Eclipse (Letonia, NB 0068), Helioclipse
-(NB 2834), Galaxium (NB 2834), Eclipseando (España, NB 0196). Este último es competencia
-directa y posible proveedor.
+La AAS verifica identidad e ISO 12312-2, **pero no el CE**. Estar en su lista es necesario
+y no suficiente. De los cinco fabricantes chinos de esa lista:
 
-La lista de referencia de fabricantes seguros es la de la **AAS**:
-<https://eclipse.aas.org/eye-safety/viewers-filters>
+| Fabricante | CE / examen UE de tipo |
+| --- | --- |
+| **Shenzhen Lionstar Technology** | **Confirmado**: CE bajo 2016/425, EN ISO 12312-2:2015, organismo notificado **CCQS (NB 2834)** |
+| **Cangnan County Qiwei Craft** | Declara CE cat. II; organismo notificado sin confirmar |
+| Shenzhen Shihui Tongda | Declara CE (marca Keyaluo); sin confirmar |
+| Hangzhou Retsing Eyewear | Declara CE; solo mayorista, MOQ 1.000 |
+| Jaxy Optical Instruments | Sin evidencia de CE |
+
+**Lionstar es el candidato**: CCQS es el mismo organismo notificado que certifica a
+Helioclipse y Galaxium, las marcas europeas de referencia.
+
+**Los dos pasos que filtran el mercado entero**, antes de negociar nada:
+
+1. Pedir el **certificado de examen UE de tipo** (Módulo B, 2016/425) con su número y el
+   del organismo notificado. No vale una declaración de conformidad ni un informe ISO.
+2. Verificar ese organismo en **NANDO** (<https://ec.europa.eu/growth/tools-databases/nando/>)
+   y comprobar que está autorizado **para 2016/425** concretamente.
+
+Lista de referencia de la AAS: <https://eclipse.aas.org/eye-safety/viewers-filters>
 
 ### Sinergia con las webs
 
@@ -388,9 +419,10 @@ Cosas que conviene no romper:
 
 ## 12. Pendiente
 
-- Banner de consentimiento de cookies antes de activar la publicidad.
+- Dar de alta los buzones de contacto (§9). **Bloquea publicar**: la LSSI exige un medio
+  de contacto que funcione.
 - Mapa interactivo de la franja de totalidad.
 - Autenticación para que los negocios gestionen su propia ficha.
 - Ampliar el registro de 35 a los 115 municipios (el agente auditor propone los que faltan).
 - Comprar los dominios recomendados de §2 antes de que los cojan.
-- Dar de alta los buzones de contacto (§9).
+- Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§8).
