@@ -57,6 +57,14 @@ está publicado: intercambiar las dos líneas recoloca canonical, hreflang y sit
 - **Rama de producción: `claude/eclipse-spain-2025-web-uf6i0g`**, que además es la rama por
   defecto del repositorio. No hay `main`: cada push a esa rama despliega producción.
 - URL de fábrica: `eclipse-webs.vercel.app`.
+- Dominios dados de alta: `ceutaeclipse.es` y `www.ceutaeclipse.es`. Los otros tres siguen
+  apuntando al registrador y hay que añadirlos al proyecto cuando toque publicarlos.
+
+**Pendiente de un clic en Vercel**: ahora mismo el ápex `ceutaeclipse.es` redirige (308) a
+`www.ceutaeclipse.es`, mientras que el canonical del código apunta al ápex. Google acaba
+resolviéndolo, pero es una ambigüedad que no hace falta tener. En *Settings → Domains*,
+marcar `ceutaeclipse.es` como dominio principal para que sea `www` quien redirija hacia él.
+Si se prefiere lo contrario, cambiar el canónico en `TENANTS` a `www.ceutaeclipse.es`.
 
 Un host que no esté en `TENANTS` —una URL de preview, `localhost`— recibe el tenant
 genérico **con su propio host como dominio**, de modo que se canonicaliza a sí mismo. Esto
