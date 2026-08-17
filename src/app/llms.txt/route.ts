@@ -1,5 +1,5 @@
 import { EDITORIAL_ARTICLES } from "@/content/articles";
-import { citiesByTotality, citiesOutsideTotality, formatDuration } from "@/lib/eclipse/cities";
+import { citiesByTotality, citiesOutsideTotality, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
 import { DELTA_T_SECONDS } from "@/lib/eclipse/besselian";
 import { currentTenant } from "@/lib/tenant-context";
@@ -30,7 +30,7 @@ export async function GET() {
 
   const partialRows = citiesOutsideTotality()
     .sort((a, b) => b.eclipse.obscuration - a.eclipse.obscuration)
-    .map((c) => `| ${c.name} | ${(c.eclipse.obscuration * 100).toFixed(1)}% | ${c.localTimes.maximum} |`)
+    .map((c) => `| ${c.name} | ${formatObscuration(c.eclipse.obscuration, c.eclipse.isTotal)} | ${c.localTimes.maximum} |`)
     .join("\n");
 
   const guides = EDITORIAL_ARTICLES.map((a) => {
@@ -51,7 +51,7 @@ ${
   city.eclipse.isTotal
     ? `- Duración de la totalidad en ${city.name}: ${duration}.
 - Totalidad en ${city.name}: de ${city.localTimes.totalityStart} a ${city.localTimes.totalityEnd} (${city.timeZone}).`
-    : `- Desde ${city.name} solo se ve eclipse parcial, con un máximo del ${(city.eclipse.obscuration * 100).toFixed(1)}% del disco solar cubierto a las ${city.localTimes.maximum}.`
+    : `- Desde ${city.name} solo se ve eclipse parcial, con un máximo del ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} del disco solar cubierto a las ${city.localTimes.maximum}.`
 }
 - Eclipse parcial en ${city.name}: de ${city.localTimes.partialStart} a ${city.localTimes.partialEnd}.
 - Altura del Sol en el máximo: ${city.eclipse.sunAltitudeDeg.toFixed(1)}°. Azimut: ${city.eclipse.sunAzimuthDeg.toFixed(0)}° (este-sureste).

@@ -27,8 +27,12 @@ export interface Tenant {
  */
 export const TENANTS: Tenant[] = [
   {
-    domain: "ceutaeclipse.com",
-    aliases: ["ceutaeclipse.es", "www.ceutaeclipse.com", "www.ceutaeclipse.es"],
+    // El .es es el dominio canónico de Ceuta porque es el que está publicado. El
+    // .com sirve el mismo contenido y debe redirigir aquí desde el panel de
+    // Vercel; si algún día se prefiere el .com, basta con intercambiar estas dos
+    // líneas y todos los canonical, hreflang y sitemaps se recolocan solos.
+    domain: "ceutaeclipse.es",
+    aliases: ["ceutaeclipse.com", "www.ceutaeclipse.es", "www.ceutaeclipse.com"],
     citySlug: "ceuta",
     brand: "Ceuta Eclipse",
     accentHsl: "28 96% 56%",
@@ -57,39 +61,60 @@ export const TENANTS: Tenant[] = [
 ];
 
 /**
- * Tenant por defecto: el portal general que agrega toda la red.
+ * Plantilla del tenant por defecto.
  *
- * También es el que sirve en local y en las URLs de preview, para que un despliegue
- * de prueba siga siendo navegable sin tocar el fichero de hosts.
+ * Sirve para lo que no es un dominio de la red: `localhost`, las URLs
+ * `*.vercel.app` de preview y producción, y cualquier host desconocido.
+ *
+ * `domain` es un marcador y **nunca se usa tal cual**: `resolveTenant()` lo
+ * sustituye por el host real de la petición. El motivo es concreto y costó un bug
+ * en producción: si aquí figura un dominio fijo, todas las URLs canónicas, el
+ * sitemap y el llms.txt de los despliegues de preview apuntan a ese dominio. Si
+ * además resulta que no es nuestro, estaríamos regalándole a un tercero todas las
+ * señales de canonicalización.
  */
-export const HUB_TENANT: Tenant = {
-  domain: "eclipse2027.es",
-  aliases: ["localhost:3000", "localhost", "www.eclipse2027.es"],
+const HUB_TEMPLATE: Omit<Tenant, "domain" | "aliases"> = {
   citySlug: "ceuta",
   brand: "Eclipse 2027",
   accentHsl: "28 96% 56%",
 };
 
+/** Tenant de reserva para cuando no hay Host que valga (renderizado sin petición). */
+export const HUB_TENANT: Tenant = {
+  ...HUB_TEMPLATE,
+  domain: "localhost:3000",
+  aliases: [],
+};
+
 const BY_HOST = new Map<string, Tenant>();
-for (const t of [...TENANTS, HUB_TENANT]) {
+for (const t of TENANTS) {
   BY_HOST.set(t.domain, t);
   for (const alias of t.aliases) BY_HOST.set(alias, t);
 }
 
-/** Resuelve el tenant a partir del Host de la petición. */
+/**
+ * Resuelve el tenant a partir del Host de la petición.
+ *
+ * Si el host no es de la red, devuelve el tenant genérico **con ese mismo host**
+ * como dominio, de modo que la web se canonicaliza a sí misma allí donde esté
+ * servida en vez de apuntar a un dominio ajeno.
+ */
 export function resolveTenant(host: string | null | undefined): Tenant {
   if (!host) return HUB_TENANT;
+
   const normalized = host.toLowerCase().trim();
-  return (
+  const known =
     BY_HOST.get(normalized) ??
     BY_HOST.get(normalized.replace(/^www\./, "")) ??
-    BY_HOST.get(normalized.split(":")[0]) ??
-    HUB_TENANT
-  );
+    BY_HOST.get(normalized.split(":")[0]);
+  if (known) return known;
+
+  return { ...HUB_TEMPLATE, domain: normalized, aliases: [] };
 }
 
+/** Cierto cuando el host no corresponde a ningún dominio de la red. */
 export function isHub(tenant: Tenant): boolean {
-  return tenant.domain === HUB_TENANT.domain;
+  return !TENANTS.some((t) => t.domain === tenant.domain);
 }
 
 export function tenantCity(tenant: Tenant): CityWithCircumstances {

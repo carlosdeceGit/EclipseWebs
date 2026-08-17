@@ -776,6 +776,20 @@ export function formatDuration(seconds: number, locale: Locale = "es"): string |
   return s === 0 ? `${m} min` : `${m} min ${s} s`;
 }
 
+/**
+ * Porcentaje de disco solar cubierto, listo para mostrar.
+ *
+ * Localidades justo al borde de la franja, como Almería, cubren un 99,96 % que al
+ * redondear sale "100,0 %". Mostrar eso en una localidad sin totalidad es engañoso:
+ * cualquiera leería que allí se hace de noche. Por eso el 100 % se reserva a la
+ * totalidad de verdad y el resto se topa en 99,9 %.
+ */
+export function formatObscuration(obscuration: number, isTotal: boolean): string {
+  const pct = obscuration * 100;
+  if (isTotal) return "100%";
+  return `${Math.min(pct, 99.9).toFixed(1)}%`;
+}
+
 /** Nombre de la ciudad en el idioma pedido. */
 export function cityName(city: City, locale: Locale): string {
   return locale === "en" && city.nameEn ? city.nameEn : city.name;

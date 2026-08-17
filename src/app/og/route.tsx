@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { getCity, formatDuration } from "@/lib/eclipse/cities";
+import { getCity, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { resolveTenant, tenantCity } from "@/lib/tenants";
 
 export const alt = "Eclipse solar total del 2 de agosto de 2027";
@@ -85,8 +85,8 @@ export async function GET(request: Request) {
               ? `${duration} of totality`
               : `${duration} de totalidad`
             : locale === "en"
-              ? `${(city.eclipse.obscuration * 100).toFixed(0)}% partial eclipse`
-              : `Eclipse parcial al ${(city.eclipse.obscuration * 100).toFixed(0)}%`}
+              ? `${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} partial eclipse`
+              : `Eclipse parcial al ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}`}
         </div>
         <div style={{ display: "flex", fontSize: 26, marginTop: "auto", opacity: 0.6 }}>
           {tenant.domain}

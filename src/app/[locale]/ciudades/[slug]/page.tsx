@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdSlot } from "@/components/AdSlot";
 import { Callout, Card, DataRow, Section } from "@/components/ui";
-import { CITIES, getCity, cityName, formatDuration, provinceName } from "@/lib/eclipse/cities";
+import { CITIES, getCity, cityName, formatDuration, formatObscuration, provinceName } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, cityGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { TENANTS } from "@/lib/tenants";
@@ -40,10 +40,10 @@ export async function generateMetadata({
       locale === "es"
         ? city.eclipse.isTotal
           ? `${name} está en la franja de totalidad con ${d}, de ${city.localTimes.totalityStart} a ${city.localTimes.totalityEnd}. Horarios completos, cómo llegar y dónde verlo.`
-          : `Desde ${name} el eclipse se verá parcial, con el ${(city.eclipse.obscuration * 100).toFixed(0)}% del Sol cubierto. Dónde ir para ver la totalidad.`
+          : `Desde ${name} el eclipse se verá parcial, con el ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} del Sol cubierto. Dónde ir para ver la totalidad.`
         : city.eclipse.isTotal
           ? `${name} is inside the path of totality with ${d}, from ${city.localTimes.totalityStart} to ${city.localTimes.totalityEnd}. Full timings, getting there and where to watch.`
-          : `From ${name} the eclipse is partial, with ${(city.eclipse.obscuration * 100).toFixed(0)}% of the Sun covered. Where to go for totality.`,
+          : `From ${name} the eclipse is partial, with ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} of the Sun covered. Where to go for totality.`,
   });
 }
 
@@ -106,7 +106,7 @@ export default async function CityPage({
               <DataRow label={t.data.partialEnd} value={city.localTimes.partialEnd} locale={locale} />
               <DataRow
                 label={t.data.obscuration}
-                value={`${(city.eclipse.obscuration * 100).toFixed(1)}%`}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
                 locale={locale}
               />
               <DataRow label={t.data.sunAltitude} value={`${city.eclipse.sunAltitudeDeg.toFixed(1)}°`} locale={locale} />

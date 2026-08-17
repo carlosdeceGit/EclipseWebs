@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { Badge, Card, Section } from "@/components/ui";
-import { citiesByTotality, citiesOutsideTotality, cityName, formatDuration } from "@/lib/eclipse/cities";
+import { citiesByTotality, citiesOutsideTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
 import { buildMetadata, datasetGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -120,7 +120,7 @@ export default async function CitiesPage({ params }: { params: Promise<{ locale:
                       {c.province}
                     </p>
                     <p className="mt-3 text-2xl font-black tabular-nums" style={{ color: "hsl(var(--muted))" }}>
-                      {(c.eclipse.obscuration * 100).toFixed(0)}%
+                      {formatObscuration(c.eclipse.obscuration, c.eclipse.isTotal)}
                     </p>
                     <p className="mt-1 text-xs" style={{ color: "hsl(var(--muted))" }}>
                       {locale === "es" ? "del Sol cubierto, sin totalidad" : "of the Sun covered, no totality"}

@@ -37,15 +37,31 @@ franjas distintas.
 
 ### En propiedad
 
-| Dominio | Ciudad | Totalidad |
-| --- | --- | --- |
-| `ceutaeclipse.com` + `ceutaeclipse.es` | Ceuta | 4 min 48 s — **el máximo de España** |
-| `eclipsecadiz.com` | Cádiz | 2 min 55 s |
-| `eclipsetarifa.com` | Tarifa | 4 min 39 s |
-| `eclipsegibraltar.com` | Gibraltar | 4 min 27 s |
+| Dominio | Ciudad | Totalidad | Estado |
+| --- | --- | --- | --- |
+| **`ceutaeclipse.es`** (canónico) + `ceutaeclipse.com` | Ceuta | 4 min 48 s — **el máximo de España** | En producción |
+| `eclipsecadiz.com` | Cádiz | 2 min 55 s | Configurado, sin activar |
+| `eclipsetarifa.com` | Tarifa | 4 min 39 s | Configurado, sin activar |
+| `eclipsegibraltar.com` | Gibraltar | 4 min 27 s | Configurado, sin activar |
 
 Configurados en `src/lib/tenants.ts`. **Añadir un dominio es añadir una entrada ahí y
 apuntar el DNS.** Nada más.
+
+El primer dominio de cada entrada es el canónico; los demás son alias que sirven el mismo
+contenido y canonicalizan al primero. En Ceuta el canónico es el `.es` porque es el que
+está publicado: intercambiar las dos líneas recoloca canonical, hreflang y sitemap.
+
+### Despliegue
+
+- Proyecto de Vercel: `eclipse-webs`, conectado al repo, framework Next.js.
+- **Rama de producción: `claude/eclipse-spain-2025-web-uf6i0g`**, que además es la rama por
+  defecto del repositorio. No hay `main`: cada push a esa rama despliega producción.
+- URL de fábrica: `eclipse-webs.vercel.app`.
+
+Un host que no esté en `TENANTS` —una URL de preview, `localhost`— recibe el tenant
+genérico **con su propio host como dominio**, de modo que se canonicaliza a sí mismo. Esto
+resuelve un bug real de producción: con un dominio fijo en la plantilla del hub, todas las
+URLs canónicas de los despliegues de preview apuntaban a un dominio ajeno.
 
 ### Libres y recomendados (verificados en Vercel, ~11,25 $/año)
 

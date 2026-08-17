@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { Callout, Card, DataRow, Section } from "@/components/ui";
-import { citiesByTotality, cityName, formatDuration } from "@/lib/eclipse/cities";
+import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, datasetGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
@@ -86,7 +86,7 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
               <DataRow label={t.data.sunAzimuth} value={`${city.eclipse.sunAzimuthDeg.toFixed(0)}°`} locale={locale} />
               <DataRow
                 label={t.data.obscuration}
-                value={`${(city.eclipse.obscuration * 100).toFixed(1)}%`}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
                 locale={locale}
               />
             </dl>

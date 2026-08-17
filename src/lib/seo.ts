@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ECLIPSE } from "./eclipse/event";
-import { cityName, formatDuration, provinceName } from "./eclipse/cities";
+import { cityName, formatDuration, formatObscuration, provinceName } from "./eclipse/cities";
 import type { City, CityWithCircumstances, Locale } from "./eclipse/types";
 import { tenantOrigin, type Tenant } from "./tenants";
 import { HTML_LANG, OG_LOCALE, localePath } from "@/i18n/config";
@@ -87,10 +87,10 @@ export function cityGraph(tenant: Tenant, city: CityWithCircumstances, locale: L
     locale === "es"
       ? city.eclipse.isTotal
         ? `El eclipse solar total del 2 de agosto de 2027 será visible desde ${name} con ${duration} de totalidad, entre las ${city.localTimes.totalityStart} y las ${city.localTimes.totalityEnd} hora local.`
-        : `El 2 de agosto de 2027 se verá un eclipse parcial desde ${name}, con un ${(city.eclipse.obscuration * 100).toFixed(0)}% del disco solar cubierto.`
+        : `El 2 de agosto de 2027 se verá un eclipse parcial desde ${name}, con un ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} del disco solar cubierto.`
       : city.eclipse.isTotal
         ? `The total solar eclipse of 2 August 2027 will be visible from ${name} with ${duration} of totality, between ${city.localTimes.totalityStart} and ${city.localTimes.totalityEnd} local time.`
-        : `On 2 August 2027 a partial eclipse will be visible from ${name}, with ${(city.eclipse.obscuration * 100).toFixed(0)}% of the solar disc covered.`;
+        : `On 2 August 2027 a partial eclipse will be visible from ${name}, with ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} of the solar disc covered.`;
 
   return {
     "@context": "https://schema.org",

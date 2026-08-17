@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
 import { Countdown } from "@/components/Countdown";
 import { Badge, Callout, Card, DataRow, Section } from "@/components/ui";
-import { citiesByTotality, cityName, formatDuration } from "@/lib/eclipse/cities";
+import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
 import { buildMetadata, cityGraph, datasetGraph, faqGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -39,10 +39,10 @@ export async function generateMetadata({
       locale === "es"
         ? city.eclipse.isTotal
           ? `${name} verá ${duration} de totalidad el 2 de agosto de 2027, de ${city.localTimes.totalityStart} a ${city.localTimes.totalityEnd}. Horarios exactos, miradores, alojamiento, eventos y directorio.`
-          : `El 2 de agosto de 2027 se verá un eclipse parcial desde ${name}, con el ${(city.eclipse.obscuration * 100).toFixed(0)}% del Sol cubierto. Dónde ir para ver la totalidad.`
+          : `El 2 de agosto de 2027 se verá un eclipse parcial desde ${name}, con el ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} del Sol cubierto. Dónde ir para ver la totalidad.`
         : city.eclipse.isTotal
           ? `${name} sees ${duration} of totality on 2 August 2027, from ${city.localTimes.totalityStart} to ${city.localTimes.totalityEnd}. Exact timings, viewpoints, accommodation, events and directory.`
-          : `On 2 August 2027 ${name} sees a partial eclipse with ${(city.eclipse.obscuration * 100).toFixed(0)}% of the Sun covered. Where to go for totality.`,
+          : `On 2 August 2027 ${name} sees a partial eclipse with ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} of the Sun covered. Where to go for totality.`,
   });
 }
 
@@ -124,7 +124,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 El <strong style={{ color: "hsl(var(--text))" }}>lunes 2 de agosto de 2027</strong> se
                 verá desde {name} un eclipse parcial, con un máximo del{" "}
                 <strong style={{ color: "hsl(var(--text))" }}>
-                  {(city.eclipse.obscuration * 100).toFixed(0)}%
+                  {formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
                 </strong>{" "}
                 del disco solar cubierto a las{" "}
                 <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.maximum}</strong>. {city.hook.es}
@@ -144,7 +144,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               On <strong style={{ color: "hsl(var(--text))" }}>Monday 2 August 2027</strong> {name} will
               see a partial eclipse, peaking at{" "}
               <strong style={{ color: "hsl(var(--text))" }}>
-                {(city.eclipse.obscuration * 100).toFixed(0)}%
+                {formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
               </strong>{" "}
               of the solar disc covered at{" "}
               <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.maximum}</strong>. {city.hook.en}
@@ -199,7 +199,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <DataRow label={t.data.magnitude} value={city.eclipse.magnitude.toFixed(3)} locale={locale} />
               <DataRow
                 label={t.data.obscuration}
-                value={`${(city.eclipse.obscuration * 100).toFixed(1)}%`}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
                 locale={locale}
               />
               <DataRow label={t.data.coordinates} value={`${city.lat.toFixed(4)}, ${city.lon.toFixed(4)}`} locale={locale} />
