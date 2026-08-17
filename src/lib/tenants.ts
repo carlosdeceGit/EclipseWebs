@@ -38,22 +38,25 @@ export const TENANTS: Tenant[] = [
     accentHsl: "28 96% 56%",
   },
   {
-    domain: "eclipsecadiz.com",
-    aliases: ["www.eclipsecadiz.com"],
+    // Canónico el .es, que es el dominio en propiedad. El .com se deja declarado
+    // como alias: si algún día se adquiere, sirve el mismo contenido y canonicaliza
+    // aquí sin tocar código. Un alias que no resuelve no cuesta nada.
+    domain: "eclipsecadiz.es",
+    aliases: ["eclipsecadiz.com", "www.eclipsecadiz.es", "www.eclipsecadiz.com"],
     citySlug: "cadiz",
     brand: "Eclipse Cádiz",
     accentHsl: "45 96% 52%",
   },
   {
-    domain: "eclipsetarifa.com",
-    aliases: ["www.eclipsetarifa.com"],
+    domain: "eclipsetarifa.es",
+    aliases: ["eclipsetarifa.com", "www.eclipsetarifa.es", "www.eclipsetarifa.com"],
     citySlug: "tarifa",
     brand: "Eclipse Tarifa",
     accentHsl: "260 84% 62%",
   },
   {
     domain: "eclipsegibraltar.com",
-    aliases: ["www.eclipsegibraltar.com"],
+    aliases: ["eclipsegibraltar.es", "www.eclipsegibraltar.com", "www.eclipsegibraltar.es"],
     citySlug: "gibraltar",
     brand: "Eclipse Gibraltar",
     accentHsl: "0 84% 58%",

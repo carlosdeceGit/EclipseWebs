@@ -1,4 +1,4 @@
-import { EDITORIAL_ARTICLES } from "@/content/articles";
+import { editorialArticlesFor } from "@/content/articles";
 import { citiesByTotality, citiesOutsideTotality, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
 import { DELTA_T_SECONDS } from "@/lib/eclipse/besselian";
@@ -33,7 +33,7 @@ export async function GET() {
     .map((c) => `| ${c.name} | ${formatObscuration(c.eclipse.obscuration, c.eclipse.isTotal)} | ${c.localTimes.maximum} |`)
     .join("\n");
 
-  const guides = EDITORIAL_ARTICLES.map((a) => {
+  const guides = editorialArticlesFor(city.slug).map((a) => {
     const content = a.content.es(city, tenant);
     return `- [${content.title}](${origin}${localePath("es", `/${a.slug}`)}): ${content.description}`;
   }).join("\n");

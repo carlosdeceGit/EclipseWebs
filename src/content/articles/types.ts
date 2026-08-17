@@ -14,6 +14,8 @@ export type Block =
 export interface ArticleContent {
   title: string;
   description: string;
+  /** Etiqueta corta para tarjetas y navegación, cuando el título no cabe. */
+  shortTitle?: string;
   body: Block[];
 }
 
@@ -24,6 +26,17 @@ export interface Article {
    * guías: no son contenido editorial.
    */
   legal?: boolean;
+  /**
+   * Ciudades en las que existe este artículo. Sin la lista, el artículo es de toda
+   * la red.
+   *
+   * Es lo que permite que cada dominio tenga URLs que ningún otro tiene. Un
+   * artículo exclusivo trata algo que solo pasa en esa ciudad —una frontera, un
+   * ferry, una nube que fabrica una montaña—, así que publicarlo en las cuatro
+   * webs sería a la vez contenido duplicado y contenido falso. Fuera de sus
+   * ciudades la ruta devuelve 404 y no entra en el sitemap.
+   */
+  cities?: string[];
   /**
    * El tenant llega como segundo argumento porque las páginas legales necesitan el
    * dominio para componer el correo de contacto. Las guías editoriales lo ignoran.

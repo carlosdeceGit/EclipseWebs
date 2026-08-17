@@ -1,5 +1,6 @@
 import { formatDuration } from "@/lib/eclipse/cities";
-import type { Article } from "./types";
+import { localWhyHere } from "../local";
+import type { Article, Block } from "./types";
 
 /** La guía troncal: qué es, qué se ve y por qué este eclipse es distinto. */
 export const guia: Article = {
@@ -7,6 +8,7 @@ export const guia: Article = {
   content: {
     es: (city) => {
       const d = formatDuration(city.eclipse.totalitySeconds);
+      const whyHere = localWhyHere(city.slug, "es");
       return {
         title: "Guía completa del eclipse solar total del 2 de agosto de 2027",
         description: `Qué es un eclipse total, qué se ve exactamente, cómo se prepara la observación desde ${city.name} y por qué este eclipse es excepcional.`,
@@ -46,6 +48,12 @@ export const guia: Article = {
                 }, y después de este eclipse y del anular de enero de 2028 no vuelve a haber un eclipse total visible desde la España peninsular hasta 2053.`
               : `Desde ${city.name} el eclipse se verá parcial. La franja de totalidad pasa por el extremo sur y merece mucho la pena el desplazamiento: no vuelve a haber otro total en la España peninsular hasta 2053.`,
           },
+          ...(whyHere
+            ? ([
+                { type: "h2", text: `Qué significa este eclipse para ${city.name}` },
+                { type: "p", text: whyHere },
+              ] as Block[])
+            : []),
           { type: "h2", text: "Qué se ve exactamente durante la totalidad" },
           {
             type: "ul",
@@ -79,6 +87,7 @@ export const guia: Article = {
     en: (city) => {
       const d = formatDuration(city.eclipse.totalitySeconds, "en");
       const name = city.nameEn ?? city.name;
+      const whyHere = localWhyHere(city.slug, "en");
       return {
         title: "Complete guide to the total solar eclipse of 2 August 2027",
         description: `What a total eclipse is, what you actually see, how to prepare from ${name}, and why this particular eclipse is exceptional.`,
@@ -118,6 +127,12 @@ export const guia: Article = {
                 }, and after this eclipse and the annular one of January 2028, no total solar eclipse is visible from mainland Spain again until 2053.`
               : `From ${name} the eclipse will be partial. The path of totality crosses the far south and the trip is very much worth making: there is no other total eclipse visible from mainland Spain until 2053.`,
           },
+          ...(whyHere
+            ? ([
+                { type: "h2", text: `What this eclipse means for ${name}` },
+                { type: "p", text: whyHere },
+              ] as Block[])
+            : []),
           { type: "h2", text: "What you actually see during totality" },
           {
             type: "ul",
