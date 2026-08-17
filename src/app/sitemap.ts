@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { ARTICLES } from "@/content/articles";
+import { postsForCity } from "@/content/blog";
 import { CITIES } from "@/lib/eclipse/cities";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantOrigin } from "@/lib/tenants";
@@ -16,6 +17,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const origin = tenantOrigin(tenant);
   const now = new Date();
 
+  // Solo los posts de la ciudad de este dominio. Anunciar en el sitemap de un
+  // dominio URLs que ese dominio devuelve como 404 es la forma más rápida de
+  // gastarse el presupuesto de rastreo en nada.
+  const posts = postsForCity(tenant.citySlug);
+
   const paths: [string, number, MetadataRoute.Sitemap[number]["changeFrequency"]][] = [
     ["/", 1, "daily"],
     ["/horarios", 0.9, "weekly"],
@@ -26,6 +32,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ["/clasificados/nuevo", 0.4, "monthly"],
     ["/anunciate", 0.5, "monthly"],
     ["/faq", 0.7, "weekly"],
+    ...(posts.length > 0
+      ? ([["/blog", 0.8, "weekly"]] as [string, number, MetadataRoute.Sitemap[number]["changeFrequency"]][])
+      : []),
+    ...posts.map(
+      (p) =>
+        [`/blog/${p.slug}`, 0.7, "monthly"] as [
+          string,
+          number,
+          MetadataRoute.Sitemap[number]["changeFrequency"],
+        ],
+    ),
     ...ARTICLES.map(
       (a) =>
         [`/${a.slug}`, a.legal ? 0.2 : 0.8, a.legal ? "yearly" : "weekly"] as [

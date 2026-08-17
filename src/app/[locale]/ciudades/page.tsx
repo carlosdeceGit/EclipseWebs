@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection } from "@/components/AdSlot";
 import { Badge, Card, Section } from "@/components/ui";
 import { citiesByTotality, citiesOutsideTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
@@ -96,9 +96,7 @@ export default async function CitiesPage({ params }: { params: Promise<{ locale:
         </div>
       </Section>
 
-      <Section>
-        <AdSlot name="listing" locale={locale} />
-      </Section>
+      <AdSection name="listing" locale={locale} />
 
       {outside.length > 0 && (
         <Section

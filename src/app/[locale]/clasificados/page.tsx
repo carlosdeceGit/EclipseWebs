@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection } from "@/components/AdSlot";
 import { ListingCard } from "@/components/ListingCard";
 import { Callout, Card, Section } from "@/components/ui";
 import { CLASSIFIED_CATEGORIES, getListings } from "@/lib/db/listings";
@@ -126,9 +126,7 @@ export default async function ClassifiedsPage({
         )}
       </Section>
 
-      <Section>
-        <AdSlot name="listing" locale={locale} />
-      </Section>
+      <AdSection name="listing" locale={locale} />
 
       <Section>
         <Callout

@@ -20,7 +20,7 @@ Cuatro vías de ingreso:
 1. **Publicidad programática** (AdSense, migrando a Ezoic o Mediavine con volumen).
 2. **Directorio de negocios**: ficha básica gratis, destacada 49 €, patrocinio de ciudad 390 €.
 3. **Clasificados** entre particulares, gratis y moderados.
-4. **Gafas de eclipse** como negocio subsidiario (ver §8).
+4. **Gafas de eclipse** como negocio subsidiario (ver §9).
 
 La estrategia es posicionar con casi un año de antelación. Después del 2 de agosto de 2027
 esta audiencia desaparece de golpe: no hay segunda temporada.
@@ -189,12 +189,18 @@ src/
   content/
     faq.ts                 FAQ bilingües
     articles/              guías largas bilingües, una por archivo
+    blog/                  posts del blog, agrupados por ciudad
   components/
+    Blocks.tsx             renderizador de bloques, compartido por guías y blog
+    art/                   ilustraciones SVG propias (ver §7)
   app/
     [locale]/              todas las páginas
+    [locale]/blog/         índice del blog y página de cada post
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
     og/                    imagen social generada al vuelo
+    ads.txt                autorización de inventario, por tenant
+    blog/rss.xml           feed del blog de la ciudad del dominio
     llms.txt, robots.ts, sitemap.ts
 agents/                    sistema de agentes autónomos
 scripts/validate-eclipse.ts
@@ -240,9 +246,10 @@ resto. **Cualquier contenido nuevo debe seguir esta regla.**
 ## 5. SEO y GEO
 
 - Metadatos, canonical y `hreflang` por dominio e idioma, con `x-default` al español.
-- JSON-LD: `Event`, `Place`, `WebSite`, `Organization`, `FAQPage`, `BreadcrumbList` y
-  `Dataset` para las tablas de duraciones.
-- `sitemap.xml` con alternates de idioma por URL. `robots.txt` por tenant.
+- JSON-LD: `Event`, `Place`, `WebSite`, `Organization`, `FAQPage`, `BreadcrumbList`,
+  `Dataset` para las tablas de duraciones y `Blog`/`BlogPosting` para el blog.
+- `sitemap.xml` con alternates de idioma por URL. `robots.txt` por tenant. `blog/rss.xml`
+  con los posts de la ciudad del dominio.
 - **`llms.txt`** con los hechos destilados, las tablas completas y **el método y el margen
   de error declarados**, para que un modelo que cite nuestras cifras pueda citar también su
   precisión.
@@ -260,10 +267,23 @@ cuánto dura): es lo que copian los motores generativos.
 
 ## 6. Monetización: detalles de implementación
 
-- Los huecos de anuncio **reservan altura aunque no haya anuncio**, para que el layout no
-  salte el día que se activen. Saltar penaliza CLS.
-- Sin `NEXT_PUBLIC_ADSENSE_CLIENT_ID` no se carga el script de Google ni se instala ninguna
-  cookie de terceros. Eso permite desplegar antes de tener AdSense aprobado.
+**Pasos de activación, en orden y con lo que bloquea cada uno:
+[`docs/activar-adsense.md`](docs/activar-adsense.md).** Resumen: el código está listo; lo
+que falta es el buzón `contacto@`, la cuenta de AdSense y un CMP certificado por Google.
+
+- Un hueco sin configurar **no se dibuja**: ni marcador, ni borde, ni altura reservada, ni
+  el contenedor que lo envuelve. `AdSection` existe precisamente para que la `<Section>`
+  desaparezca con el anuncio y no queden secciones vacías con su relleno vertical.
+  El coste asumido es un salto de layout **el día de activar** —y solo ese día— en lugar de
+  recuadros vacíos de aquí a entonces. Con el hueco activo sí se reserva la altura, que es
+  lo que evita el salto mientras carga cada anuncio.
+- Sin `NEXT_PUBLIC_ADSENSE_CLIENT_ID` no se carga el script de Google, no se instala ninguna
+  cookie de terceros y `/ads.txt` devuelve 404. Eso permite desplegar antes de tener AdSense
+  aprobado.
+- **`/ads.txt` se genera por tenant** desde el ID de cliente. Además de ser obligatorio para
+  que Google autorice el inventario, es el método de verificación de propiedad que **no
+  carga nada en el navegador**, al contrario que el fragmento de código en el `<head>`: es
+  el único compatible con el consentimiento previo. Verificar por ahí.
 - Los enlaces salientes comerciales llevan `rel="sponsored nofollow"`. **No es opcional**:
   marcarlos mal hunde el dominio entero.
 - RLS de Supabase impide que un usuario se autoasigne nivel de pago o se autoapruebe.
@@ -288,7 +308,70 @@ cubre añadir después otra red.
 
 ---
 
-## 7. Agentes autónomos
+## 7. El blog
+
+Cada dominio tiene su blog: guías largas, específicas de su ciudad y con ilustraciones
+propias. Hoy hay **16 posts de Ceuta**, en español e inglés, en `src/content/blog/ceuta/`.
+
+Sirve a tres cosas a la vez: es el volumen editorial que hace defendible una solicitud de
+AdSense, cubre las consultas de cola larga que la home no puede cubrir («dónde ver el
+eclipse en Ceuta», «cómo llegar», «qué comer»), y da a los motores generativos texto local
+que citar.
+
+### Dos reglas que no se rompen
+
+**1. Un post pertenece a una ciudad.** `citySlug` decide dónde se publica: la ruta devuelve
+404 si el tenant no es el de esa ciudad, y el índice, el sitemap, el RSS y el `llms.txt` de
+los demás dominios ni lo mencionan. No es una preferencia editorial: servir el mismo
+artículo en dos dominios propios es contenido duplicado, y la forma más rápida de que
+Google se quede con uno e ignore el resto. Cuando se escriban posts de Cádiz, llevarán
+`citySlug: "cadiz"` y ocurrirá lo simétrico.
+
+**2. Ninguna cifra se escribe a mano.** El cuerpo de cada post es una función de la ciudad:
+las horas de contacto, la duración y la altura del Sol se interpolan del cálculo besseliano
+(`hm()` y `durationWords()` en `src/content/blog/helpers.ts`). Si el cálculo se afina, los
+textos se afinan con él y no queda ninguna cifra huérfana contradiciendo a las tablas.
+
+### Las ilustraciones
+
+Quince ilustraciones **SVG dibujadas a mano** en `src/components/art/`, sin imágenes
+externas ni fuentes remotas. Cada post lleva su portada más una segunda distinta dentro del
+texto.
+
+- Son nuestras: no hay licencia que revisar ni una foto de banco que aparezca idéntica en la
+  web de la competencia.
+- Heredan el color de acento del tenant, así que la misma ilustración encaja en cualquier
+  dominio de la red sin generar un archivo por ciudad.
+- Las que muestran cifras —`contacts-timeline`, `sun-position`, `duration-bars`— las sacan
+  del mismo cálculo que las tablas. Un número dibujado a mano dentro de un SVG es el tipo de
+  dato que se queda obsoleto sin que nadie se dé cuenta.
+- Las que son esquemas lo dicen dentro del propio dibujo («esquema orientativo, no a
+  escala»).
+
+**No hay fotografías, y es a propósito**: no publicamos fotos de las que no tengamos los
+derechos. El campo `photo` de `BlogPost` existe para que el día que haya fotos propias de
+Ceuta entren sin tocar plantillas.
+
+### Cómo añadir un post
+
+1. Escribirlo en el archivo temático de su ciudad, exportando un `BlogPost`.
+2. Añadirlo a `BLOG_POSTS` en `src/content/blog/index.ts`, en el orden editorial.
+3. Elegir una `cover` del registro de `art/`. Si además se usa dentro del cuerpo, la portada
+   de arriba se omite sola para no duplicarla.
+4. Rellenar `related` con slugs que existan.
+
+El sitemap, el RSS, el `llms.txt`, el JSON-LD `BlogPosting`, la imagen OG con su titular y
+los minutos de lectura salen solos.
+
+### Negrita en el contenido
+
+`**así**` funciona en párrafos, listas, callouts, FAQ y en el párrafo de entrada. Es la
+única marca de Markdown que interpreta el renderizador, a propósito: lo demás sería una
+dependencia y una superficie de escape de HTML a cambio de una cursiva.
+
+---
+
+## 8. Agentes autónomos
 
 Cuatro agentes **actúan por su cuenta**: publican eventos, moderan anuncios y auditan
 datos, sin esperar aprobación.
@@ -334,7 +417,7 @@ npm run agents:run -- eventos --dry
 
 ---
 
-## 8. Negocio de gafas de eclipse
+## 9. Negocio de gafas de eclipse
 
 Detalle completo en [`docs/negocio-gafas.md`](docs/negocio-gafas.md). Lo esencial:
 
@@ -390,7 +473,7 @@ credibilidad que la hace útil — y con ella, el posicionamiento.
 
 ---
 
-## 9. Datos legales
+## 10. Datos legales
 
 Titular configurado en `src/lib/legal-entity.ts` y propagado a las cuatro webs y los dos
 idiomas:
@@ -409,7 +492,7 @@ revisa AdSense al aprobar un dominio.
 
 ---
 
-## 10. Comandos
+## 11. Comandos
 
 ```bash
 npm install
@@ -425,7 +508,7 @@ AdSense los huecos se muestran como marcadores. Ver `.env.example`.
 
 ---
 
-## 11. Reglas del proyecto
+## 12. Reglas del proyecto
 
 Cosas que conviene no romper:
 
@@ -436,17 +519,30 @@ Cosas que conviene no romper:
 4. **Los guardarraíles no son opcionales**: un agente que escribe algo nuevo necesita su
    validador en `guardrails.ts` antes que su función en `store.ts`.
 5. **`rel="sponsored nofollow"`** en todo enlace comercial saliente.
-6. **No duplicar contenido entre dominios propios.**
+6. **No duplicar contenido entre dominios propios.** En el blog eso significa que cada post
+   declara su `citySlug` y solo se sirve en el dominio de esa ciudad.
 7. **La guía de seguridad no se suaviza por motivos comerciales.**
+8. **Ninguna cifra escrita a mano en el contenido.** Horas, duraciones y altura del Sol se
+   interpolan del cálculo, también en los posts y dentro de las ilustraciones.
+9. **Ninguna imagen de la que no tengamos los derechos.** Las ilustraciones son SVG propio;
+   si algún día hay fotos, van por el campo `photo` y con su crédito.
 
 ---
 
-## 12. Pendiente
+## 13. Pendiente
 
-- Dar de alta los buzones de contacto (§9). **Bloquea publicar**: la LSSI exige un medio
-  de contacto que funcione.
+- Dar de alta los buzones de contacto (§10). **Bloquea publicar y bloquea AdSense**: la LSSI
+  exige un medio de contacto que funcione y el revisor lo comprueba.
+- **CMP certificado por Google** antes de encender los bloques de anuncios. El banner actual
+  cumple con la AEPD pero no es un CMP de IAB TCF v2.2, que es lo que exige la política de
+  consentimiento de la UE de Google. Detalle y opciones en `docs/activar-adsense.md` §5.
+- Marcar `ceutaeclipse.es` como dominio principal en Vercel, para que redirija `www` y no al
+  contrario.
 - Mapa interactivo de la franja de totalidad.
+- Posts de blog para Cádiz, Tarifa y Gibraltar cuando se activen esos dominios: hoy su
+  `/blog` sale vacío y con `noindex`, que es el comportamiento correcto mientras no haya
+  contenido propio de esas ciudades.
 - Autenticación para que los negocios gestionen su propia ficha.
 - Ampliar el registro de 35 a los 115 municipios (el agente auditor propone los que faltan).
 - Comprar los dominios recomendados de §2 antes de que los cojan.
-- Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§8).
+- Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§9).

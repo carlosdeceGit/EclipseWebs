@@ -21,6 +21,19 @@ export async function GET(request: Request) {
   const name = locale === "en" ? (city.nameEn ?? city.name) : city.name;
   const duration = formatDuration(city.eclipse.totalitySeconds, locale);
 
+  /**
+   * Título propio, para los posts del blog.
+   *
+   * Sin `title` se compone la portada genérica de la ciudad. Con él, el titular del
+   * post pasa a ser el protagonista y la ciudad y la duración bajan a subtítulo: es
+   * lo que hace que dieciséis posts compartidos en redes no se vean idénticos.
+   *
+   * Se recorta a 90 caracteres porque a partir de ahí el texto no cabe en 630 px de
+   * alto sin reducir el cuerpo a un tamaño ilegible en la miniatura de un chat.
+   */
+  const rawTitle = searchParams.get("title")?.trim();
+  const title = rawTitle ? (rawTitle.length > 90 ? `${rawTitle.slice(0, 89)}…` : rawTitle) : null;
+
   return new ImageResponse(
     (
       <div
@@ -65,28 +78,60 @@ export async function GET(request: Request) {
         <div style={{ display: "flex", fontSize: 26, letterSpacing: 6, opacity: 0.75 }}>
           {locale === "en" ? "2 AUGUST 2027" : "2 DE AGOSTO DE 2027"}
         </div>
-        <div style={{ display: "flex", fontSize: 78, fontWeight: 900, lineHeight: 1.05, marginTop: 14 }}>
-          {locale === "en" ? "Total solar eclipse" : "Eclipse solar total"}
-        </div>
+
+        {title ? (
+          <div
+            style={{
+              display: "flex",
+              fontSize: title.length > 60 ? 54 : 66,
+              fontWeight: 900,
+              lineHeight: 1.1,
+              marginTop: 18,
+              maxWidth: 900,
+            }}
+          >
+            {title}
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", fontSize: 78, fontWeight: 900, lineHeight: 1.05, marginTop: 14 }}>
+              {locale === "en" ? "Total solar eclipse" : "Eclipse solar total"}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                fontSize: 78,
+                fontWeight: 900,
+                lineHeight: 1.05,
+                color: `hsl(${tenant.accentHsl})`,
+              }}
+            >
+              {locale === "en" ? `in ${name}` : `en ${name}`}
+            </div>
+          </>
+        )}
+
         <div
           style={{
             display: "flex",
-            fontSize: 78,
-            fontWeight: 900,
-            lineHeight: 1.05,
-            color: `hsl(${tenant.accentHsl})`,
+            fontSize: 32,
+            marginTop: 26,
+            opacity: 0.85,
+            color: title ? `hsl(${tenant.accentHsl})` : "white",
           }}
         >
-          {locale === "en" ? `in ${name}` : `en ${name}`}
-        </div>
-        <div style={{ display: "flex", fontSize: 34, marginTop: 28, opacity: 0.85 }}>
-          {duration
-            ? locale === "en"
-              ? `${duration} of totality`
-              : `${duration} de totalidad`
-            : locale === "en"
-              ? `${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} partial eclipse`
-              : `Eclipse parcial al ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}`}
+          {[
+            title ? name : null,
+            duration
+              ? locale === "en"
+                ? `${duration} of totality`
+                : `${duration} de totalidad`
+              : locale === "en"
+                ? `${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)} partial eclipse`
+                : `Eclipse parcial al ${formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}`,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </div>
         <div style={{ display: "flex", fontSize: 26, marginTop: "auto", opacity: 0.6 }}>
           {tenant.domain}

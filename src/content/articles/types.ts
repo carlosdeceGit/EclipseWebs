@@ -1,4 +1,5 @@
 import type { FaqItem } from "../faq";
+import type { ArtName } from "@/components/art";
 import type { CityWithCircumstances, Locale } from "@/lib/eclipse/types";
 import type { Tenant } from "@/lib/tenants";
 
@@ -7,8 +8,14 @@ export type Block =
   | { type: "h3"; text: string }
   | { type: "p"; text: string }
   | { type: "ul"; items: string[] }
+  | { type: "ol"; items: string[] }
   | { type: "callout"; title: string; text: string }
   | { type: "table"; head: string[]; rows: string[][] }
+  /**
+   * Ilustración del registro de `components/art`. El texto alternativo lo pone la
+   * propia ilustración, que es quien sabe lo que dibuja; aquí solo va el pie.
+   */
+  | { type: "figure"; art: ArtName; caption?: string }
   | { type: "faq"; items: FaqItem[] };
 
 export interface ArticleContent {

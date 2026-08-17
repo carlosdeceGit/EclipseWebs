@@ -1,0 +1,266 @@
+# Activar la publicidad
+
+Estado de partida: el código ya está preparado —huecos, consentimiento, `ads.txt`— y
+no falta nada por programar. Lo que falta es de cuenta y de dominio, y va en este
+orden porque cada paso depende del anterior.
+
+Hoy hay GitHub, Vercel y el dominio en GoDaddy. Con eso, lo que queda es:
+
+| # | Paso | Dónde | Bloquea a |
+| --- | --- | --- | --- |
+| 1 | Un buzón `contacto@` que reciba correo | GoDaddy / proveedor de correo | 2, 4 |
+| 2 | Dominio principal y DNS resueltos | Vercel + GoDaddy | 4 |
+| 3 | Contenido suficiente y original | repo | 4 |
+| 4 | Cuenta de AdSense y verificación del sitio | AdSense | 5, 6 |
+| 5 | CMP certificado por Google | AdSense | 6 |
+| 6 | IDs de bloque en variables de entorno | Vercel | — |
+
+Los pasos 1 a 3 se pueden hacer hoy. El 4 tarda entre unos días y unas semanas en
+resolverse por parte de Google, así que cuanto antes se envíe, mejor.
+
+---
+
+## 1. El buzón de contacto
+
+**Es el bloqueo real, y es el paso más pequeño.** La LSSI (art. 10) exige un medio de
+contacto que funcione, y el revisor de AdSense comprueba que la página de contacto
+existe y es coherente. `src/lib/legal-entity.ts` ya publica `contacto@<dominio>` en
+`/aviso-legal`, `/privacidad` y `/contacto`: hoy esa dirección aparece en la web y no
+recibe nada, lo que es peor que no tenerla.
+
+Hacen falta cuatro buzones o redirecciones:
+
+```
+contacto@ceutaeclipse.es      ← el canónico, el que más importa
+contacto@ceutaeclipse.com
+contacto@eclipsecadiz.com
+contacto@eclipsetarifa.com
+contacto@eclipsegibraltar.com
+```
+
+Basta con redirecciones a una cuenta personal; no hace falta un buzón real por
+dominio. Tres opciones, de más simple a más barata:
+
+- **GoDaddy**: el reenvío de correo ya no viene incluido en todos los planes y
+  empujan a Microsoft 365. Si el plan contratado lo incluye, es el camino más corto
+  porque el DNS ya está allí.
+- **ImprovMX** o **Forward Email**: reenvío gratuito añadiendo dos registros MX en
+  GoDaddy. Es la opción con menos fricción si no se quiere tocar nada más.
+- **Cloudflare Email Routing**: gratis, con buen panel y sin límite práctico, pero
+  obliga a mover los servidores de nombres del dominio a Cloudflare. Merece la pena
+  si se va a gestionar toda la red de dominios desde un sitio; no si solo se quiere
+  un buzón.
+
+Sea cual sea, **comprobar que llega un correo de verdad** antes de seguir. Un MX mal
+puesto no da error: simplemente el correo se pierde.
+
+---
+
+## 2. Dominio principal y DNS
+
+`ceutaeclipse.es` ya sirve producción, así que el DNS de ese dominio está resuelto.
+Quedan dos cosas.
+
+**El ápex tiene que ser el principal.** Ahora `ceutaeclipse.es` redirige (308) a
+`www.ceutaeclipse.es`, mientras que el `canonical` del código apunta al ápex. Google
+lo acaba resolviendo, pero es una señal contradictoria y a un revisor le sobra. En
+*Vercel → Settings → Domains*, marcar `ceutaeclipse.es` como **primary domain** para
+que sea `www` quien redirija hacia él. Si se prefiere lo contrario, cambiar el
+dominio canónico en `TENANTS` (`src/lib/tenants.ts`) y desplegar: canonical, hreflang
+y sitemap se recolocan solos.
+
+**Los otros tres dominios.** `eclipsecadiz.com`, `eclipsetarifa.com` y
+`eclipsegibraltar.com` siguen apuntando al registrador. Cuando toque publicarlos, en
+Vercel se añaden al proyecto y en GoDaddy se ponen los registros que muestre el panel
+de Vercel para ese dominio concreto. Dos avisos sobre GoDaddy:
+
+- GoDaddy no admite `ALIAS`/`ANAME` en el ápex, así que el ápex va con un registro
+  `A` a la IP que indique Vercel y `www` con un `CNAME`. Usar **los valores que
+  muestre el panel**, no los de ninguna guía: Vercel los ha cambiado más de una vez.
+- Hay que **borrar los registros de la página aparcada** que GoDaddy crea por
+  defecto. Si se quedan, conviven con los nuevos y el dominio responde a veces con
+  una cosa y a veces con otra.
+
+Una recomendación de orden: no dar de alta los cuatro dominios en AdSense a la vez.
+Se aprueba primero `ceutaeclipse.es`, que es el que tiene contenido, y los demás se
+añaden después como sitios adicionales de la misma cuenta. Un dominio con poco
+contenido en la misma cuenta puede arrastrar la revisión de los otros.
+
+---
+
+## 3. Contenido suficiente
+
+Es el motivo número uno de rechazo, y viene con un nombre concreto en la respuesta de
+Google: *low value content*. No hay un número publicado de páginas mínimas; lo que se
+evalúa es si el sitio aporta algo que no esté ya en otro sitio.
+
+A favor tenemos bastante: las circunstancias locales están **calculadas**, no
+copiadas, hay API pública, y las guías son originales. La sección de blog añade
+volumen editorial con la misma lógica —contenido propio, específico de la ciudad del
+dominio y no duplicado entre dominios— y es justo lo que faltaba para presentarse a
+revisión con solidez.
+
+Antes de enviar, comprobar que están y funcionan: `/aviso-legal`, `/privacidad`,
+`/cookies`, `/contacto`, `/fuentes`. Ya existen. Lo que hay que verificar es que el
+correo de `/contacto` recibe (paso 1).
+
+---
+
+## 4. Cuenta de AdSense y verificación del sitio
+
+1. Crear la cuenta en <https://adsense.google.com> con el dominio `ceutaeclipse.es`.
+2. Google asigna el **ID de publisher** (`pub-XXXXXXXXXXXXXXXX`) en el momento del
+   alta, antes de aprobar nada. Ése es el dato que hace falta para continuar.
+3. En *Vercel → Settings → Environment Variables*, poner en **Production**:
+
+   ```
+   NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-XXXXXXXXXXXXXXXX
+   ```
+
+   El prefijo `ca-` va aquí, y solo aquí. En `ads.txt` la línea lleva `pub-…` sin
+   `ca-`; la ruta lo quita sola, así que no hay que pensarlo.
+4. **Redesplegar.** Las variables `NEXT_PUBLIC_` se incrustan en tiempo de build: si
+   no se vuelve a construir, el valor no existe en el sitio publicado.
+5. Verificar el sitio **por el método de `ads.txt`**, no por el fragmento de código.
+
+   Esto importa. Google ofrece tres formas de verificar la propiedad: pegar su script
+   en el `<head>`, un `<meta>`, o el archivo `ads.txt`. Las dos primeras cargan o
+   anuncian a Google antes de que el visitante haya consentido nada, que es
+   exactamente lo que la arquitectura de consentimiento de este proyecto evita. La de
+   `ads.txt` no carga nada en el navegador, y la ruta `/ads.txt` ya emite la línea
+   que Google espera en cuanto existe la variable del paso 3.
+
+   Comprobación después de desplegar:
+
+   ```bash
+   curl https://ceutaeclipse.es/ads.txt
+   # google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+   ```
+
+   Tiene que responder **200 en el ápex, sin redirección**. Si devuelve 404, falta la
+   variable o falta el redespliegue.
+6. Enviar a revisión y esperar. Mientras la cuenta esté en revisión no hay que tocar
+   nada: la web sigue sin cargar publicidad porque no hay IDs de bloque, y eso no
+   perjudica a la revisión.
+
+---
+
+## 5. El consentimiento: lo que falta de verdad
+
+Aquí hay una diferencia que conviene entender antes de activar, porque es la única
+parte del plan donde el código actual no basta.
+
+El banner de `src/components/CookieConsent.tsx` **cumple lo que pide la AEPD**:
+rechazar cuesta lo mismo que aceptar, no se carga nada de Google antes de un sí
+explícito, y retirar el consentimiento está a un clic en el pie. Eso está bien y no
+hay que estropearlo.
+
+Lo que ese banner **no** es: un CMP certificado por Google integrado con IAB TCF
+v2.2. Y desde enero de 2024 la política de consentimiento de usuarios de la UE de
+Google exige uno para servir anuncios a visitantes del EEE y Reino Unido. Es decir:
+podemos estar perfectamente en regla con la AEPD y aun así no cumplir el contrato de
+AdSense. Son dos requisitos distintos y hay que satisfacer los dos.
+
+Dos caminos:
+
+- **Mensaje de GDPR de Google** (*AdSense → Privacidad y mensajes*). Gratis,
+  certificado y sin código. Es lo que recomendaría: resuelve el requisito de Google
+  sin dependencias nuevas. El matiz es que el mensaje viaja dentro del propio script
+  de Google, así que solo puede aparecer una vez cargado ese script, y nuestro banner
+  decide precisamente si se carga o no. Resultado: quien acepte en nuestro banner
+  puede ver después el de Google. Un doble aviso es feo pero es correcto.
+- **Un CMP certificado de terceros** que soporte bloqueo previo. Más control y una
+  sola pregunta al visitante, a cambio de una integración y, según el proveedor, de
+  una cuota.
+
+El final limpio, en cualquiera de los dos casos, es **una sola pregunta**: cuando el
+CMP certificado esté en marcha, nuestro banner deja de preguntar y pasa a apoyarse en
+la señal del CMP, y el enlace «Configurar cookies» del pie abre el panel del CMP.
+Hasta entonces, mejor un doble aviso que servir anuncios sin CMP certificado.
+
+Dos cosas que no hay que olvidar al hacer este cambio:
+
+- **Subir `CONSENT_VERSION`** en `src/lib/consent.ts`. Añadir un proveedor o una
+  finalidad invalida los consentimientos anteriores: un sí para AdSense no cubre
+  añadir un CMP con sus propias cookies.
+- **Consent Mode v2**: si se integra un CMP de terceros, hay que pasarle a Google las
+  señales `ad_storage`, `ad_user_data` y `ad_personalization`. El mensaje propio de
+  Google lo hace solo.
+
+---
+
+## 6. Encender los bloques
+
+Con la cuenta aprobada:
+
+1. En AdSense, crear cinco bloques de display y copiar el ID de cada uno.
+2. Ponerlos en Vercel (Production, y también Preview si se quieren ver en las
+   previsualizaciones):
+
+   ```
+   NEXT_PUBLIC_ADSENSE_SLOT_HEADER=…
+   NEXT_PUBLIC_ADSENSE_SLOT_IN_ARTICLE=…
+   NEXT_PUBLIC_ADSENSE_SLOT_SIDEBAR=…
+   NEXT_PUBLIC_ADSENSE_SLOT_FOOTER=…
+   NEXT_PUBLIC_ADSENSE_SLOT_LISTING=…
+   ```
+
+3. Redesplegar.
+
+Se pueden activar de uno en uno: un hueco sin ID no se dibuja, así que se puede
+empezar por `inArticle` —el que mejor rinde— y ver cómo queda antes de encender el
+resto.
+
+**Anuncios automáticos: no.** Son tentadores porque prometen colocación óptima sin
+trabajo, pero requieren el script de Google en el `<head>` de todas las páginas
+—incompatible con el consentimiento previo— e insertan bloques donde les parece, lo
+que descoloca el diseño y penaliza el CLS. Las cinco posiciones manuales están
+elegidas y son suficientes.
+
+---
+
+## Cómo queda un hueco sin anuncio
+
+Desde ahora, un hueco sin configurar **no se dibuja**: ni recuadro, ni borde
+discontinuo, ni altura reservada. Tampoco el contenedor que lo envolvía, que es la
+parte que se suele olvidar y la que dejaba secciones vacías con ochenta píxeles de
+relleno.
+
+El coste de esta decisión, dicho claramente: el día que se activen los anuncios el
+contenido se moverá una vez, porque aparece altura que antes no estaba. Es un salto
+que se paga una sola vez —el día de activar— en lugar de mostrar recuadros vacíos
+todos los días hasta entonces. Con el hueco ya activo sí se reserva la altura, que es
+lo que evita el salto mientras carga cada anuncio.
+
+---
+
+## Facturación
+
+Para cobrar, Google pide dirección postal, datos fiscales y una verificación por PIN
+enviado por correo ordinario al llegar al umbral de 10 €. Dos avisos:
+
+- El PIN llega en papel y puede tardar. Conviene tener la dirección bien puesta desde
+  el principio.
+- **Ceuta tiene régimen fiscal propio** (IPSI en lugar de IVA). Cómo se declaran los
+  ingresos de AdSense con domicilio fiscal en Ceuta no es una pregunta de este
+  documento: conviene resolverla con una asesoría antes del primer cobro, no después.
+
+---
+
+## Lista de comprobación
+
+Antes de enviar a revisión:
+
+- [ ] `contacto@ceutaeclipse.es` recibe correo de verdad (probado enviando uno)
+- [ ] `ceutaeclipse.es` es el dominio principal en Vercel y `www` redirige a él
+- [ ] `https://ceutaeclipse.es/ads.txt` responde 200 con la línea de `google.com`
+- [ ] `https://ceutaeclipse.es/robots.txt` y `/sitemap.xml` responden
+- [ ] `/aviso-legal`, `/privacidad`, `/cookies`, `/contacto` y `/fuentes` cargan
+- [ ] La web tiene contenido editorial propio suficiente, blog incluido
+
+Antes de encender los bloques:
+
+- [ ] CMP certificado en marcha (mensaje de GDPR de Google o de terceros)
+- [ ] `CONSENT_VERSION` subida si cambió algo del consentimiento
+- [ ] Comprobado con el navegador: sin decisión y tras rechazar, cero peticiones a
+      `googlesyndication.com`; tras aceptar, se carga

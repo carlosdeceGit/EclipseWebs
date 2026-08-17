@@ -91,7 +91,31 @@ export interface Dictionary {
     whereToLook: string;
     aboveHorizon: string;
   };
-  ads: { placeholder: string };
+  /**
+   * Etiqueta accesible del contenedor de anuncios. Solo la leen los lectores de
+   * pantalla: visualmente no se rotula nada, y si el hueco no está activo no se
+   * dibuja el contenedor en absoluto.
+   */
+  ads: { label: string };
+  blog: {
+    /** Contiene `{city}`. */
+    title: string;
+    /** Contiene `{city}`. */
+    lead: string;
+    readingTime: string;
+    published: string;
+    updated: string;
+    related: string;
+    backToIndex: string;
+    /** Contiene `{count}`. */
+    postCount: string;
+    empty: string;
+    /** Contiene `{city}`. */
+    emptyLead: string;
+    latest: string;
+    feed: string;
+    illustrationNote: string;
+  };
 }
 
 const es: Dictionary = {
@@ -105,6 +129,7 @@ const es: Dictionary = {
     { href: "/directorio", label: "Directorio" },
     { href: "/clasificados", label: "Clasificados" },
     { href: "/guia", label: "Guía" },
+    { href: "/blog", label: "Blog" },
     { href: "/faq", label: "Preguntas" },
   ],
   common: {
@@ -189,7 +214,24 @@ const es: Dictionary = {
     whereToLook: "Dónde mirar",
     aboveHorizon: "sobre el horizonte",
   },
-  ads: { placeholder: "Espacio publicitario" },
+  ads: { label: "Publicidad" },
+  blog: {
+    title: "Blog del eclipse en {city}",
+    lead: "Guías, consejos y contexto para vivir el eclipse del 2 de agosto de 2027 en {city}: dónde verlo, cómo llegar, qué comer y qué esperar exactamente durante la totalidad.",
+    readingTime: "min de lectura",
+    published: "Publicado el",
+    updated: "Actualizado el",
+    related: "Sigue leyendo",
+    backToIndex: "Todos los artículos",
+    postCount: "{count} artículos",
+    empty: "Todavía no hay artículos para esta ciudad",
+    emptyLead:
+      "Estamos escribiendo la guía del eclipse en {city}. Mientras tanto, los horarios y el localizador ya están calculados y disponibles.",
+    latest: "Lo último",
+    feed: "Suscribirse (RSS)",
+    illustrationNote:
+      "Las ilustraciones son propias y las cifras que aparecen en ellas salen del mismo cálculo besseliano que las tablas de la web.",
+  },
 };
 
 const en: Dictionary = {
@@ -203,6 +245,7 @@ const en: Dictionary = {
     { href: "/directorio", label: "Directory" },
     { href: "/clasificados", label: "Classifieds" },
     { href: "/guia", label: "Guide" },
+    { href: "/blog", label: "Blog" },
     { href: "/faq", label: "FAQ" },
   ],
   common: {
@@ -287,7 +330,24 @@ const en: Dictionary = {
     whereToLook: "Where to look",
     aboveHorizon: "above the horizon",
   },
-  ads: { placeholder: "Advertisement" },
+  ads: { label: "Advertisement" },
+  blog: {
+    title: "The {city} eclipse blog",
+    lead: "Guides, advice and context for the total solar eclipse of 2 August 2027 in {city}: where to watch, how to get there, what to eat and exactly what to expect during totality.",
+    readingTime: "min read",
+    published: "Published",
+    updated: "Updated",
+    related: "Keep reading",
+    backToIndex: "All articles",
+    postCount: "{count} articles",
+    empty: "No articles for this city yet",
+    emptyLead:
+      "We are still writing the eclipse guide for {city}. In the meantime, the timings and the locator are already computed and available.",
+    latest: "Latest",
+    feed: "Subscribe (RSS)",
+    illustrationNote:
+      "The illustrations are our own, and any figures shown in them come from the same Besselian computation as the tables elsewhere on the site.",
+  },
 };
 
 const DICTIONARIES: Record<Locale, Dictionary> = { es, en };

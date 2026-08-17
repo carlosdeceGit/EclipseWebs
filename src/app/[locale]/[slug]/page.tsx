@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { AdSlot } from "@/components/AdSlot";
-import { Callout, Section } from "@/components/ui";
-import { ARTICLES, ARTICLES_BY_SLUG, type Block } from "@/content/articles";
+import { AdSection, AdSlot } from "@/components/AdSlot";
+import { Blocks } from "@/components/Blocks";
+import { ARTICLES, ARTICLES_BY_SLUG } from "@/content/articles";
 import { breadcrumbGraph, buildMetadata, faqGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
@@ -39,79 +39,6 @@ export async function generateMetadata({
     title: content.title,
     description: content.description,
   });
-}
-
-function renderBlock(block: Block, i: number) {
-  switch (block.type) {
-    case "h2":
-      return (
-        <h2 key={i} id={block.text.toLowerCase().replace(/[^a-z0-9]+/g, "-")}>
-          {block.text}
-        </h2>
-      );
-    case "h3":
-      return <h3 key={i}>{block.text}</h3>;
-    case "p":
-      return <p key={i}>{block.text}</p>;
-    case "ul":
-      return (
-        <ul key={i}>
-          {block.items.map((item, j) => (
-            <li key={j}>{item}</li>
-          ))}
-        </ul>
-      );
-    case "table":
-      return (
-        <div key={i} className="my-6 overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr style={{ color: "hsl(var(--muted))" }}>
-                {block.head.map((h) => (
-                  <th key={h} className="pb-2 font-medium">
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {block.rows.map((row, r) => (
-                <tr key={r} className="border-t" style={{ borderColor: "hsl(var(--border))" }}>
-                  {row.map((cell, c) => (
-                    <td key={c} className="py-2">
-                      {cell}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
-    case "callout":
-      return (
-        <div key={i} className="my-6">
-          <Callout title={block.title}>{block.text}</Callout>
-        </div>
-      );
-    case "faq":
-      return (
-        <div key={i} className="my-6 space-y-3">
-          {block.items.map((item) => (
-            <details
-              key={item.q}
-              className="rounded-2xl border p-5"
-              style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
-            >
-              <summary className="cursor-pointer font-semibold">{item.q}</summary>
-              <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted))" }}>
-                {item.a}
-              </p>
-            </details>
-          ))}
-        </div>
-      );
-  }
 }
 
 export default async function ArticlePage({
@@ -155,17 +82,13 @@ export default async function ArticlePage({
           {content.description}
         </p>
         <div className="prose-eclipse mt-8">
-          {content.body.slice(0, adAfter).map(renderBlock)}
-          <div className="my-8">
-            <AdSlot name="inArticle" locale={locale} />
-          </div>
-          {content.body.slice(adAfter).map((b, i) => renderBlock(b, i + adAfter))}
+          <Blocks blocks={content.body.slice(0, adAfter)} city={city} locale={locale} />
+          <AdSlot name="inArticle" locale={locale} className="my-8" />
+          <Blocks blocks={content.body.slice(adAfter)} city={city} locale={locale} offset={adAfter} />
         </div>
       </article>
 
-      <Section>
-        <AdSlot name="footer" locale={locale} />
-      </Section>
+      <AdSection name="footer" locale={locale} />
     </>
   );
 }

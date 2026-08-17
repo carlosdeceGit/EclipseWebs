@@ -17,9 +17,15 @@ export default function proxy(request: NextRequest) {
   const headers = new Headers(request.headers);
   headers.set("x-eclipse-host", host);
 
-  // Los archivos servidos en la raíz por convención no llevan idioma.
+  // Los archivos servidos en la raíz por convención no llevan idioma. `ads.txt` es
+  // de los que menos margen tienen: Google lo busca exactamente en la raíz del
+  // dominio y un 404 o una redirección ahí se traducen en inventario sin vender.
   const isRootAsset =
-    pathname === "/robots.txt" || pathname === "/sitemap.xml" || pathname === "/llms.txt";
+    pathname === "/robots.txt" ||
+    pathname === "/sitemap.xml" ||
+    pathname === "/llms.txt" ||
+    pathname === "/ads.txt" ||
+    pathname === "/blog/rss.xml";
 
   if (isRootAsset || pathname.startsWith("/api/") || pathname === "/og") {
     return NextResponse.next({ request: { headers } });

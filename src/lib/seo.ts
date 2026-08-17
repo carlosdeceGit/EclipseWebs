@@ -20,11 +20,25 @@ export function buildMetadata(opts: {
   description: string;
   /** Camino interno, sin prefijo de idioma. */
   path: string;
+  /**
+   * Titular para la imagen de compartición.
+   *
+   * Sin él, la OG es la portada genérica de la ciudad, que es lo correcto para la
+   * home y las páginas de datos. Los posts del blog sí lo pasan: dieciséis enlaces
+   * compartidos con la misma imagen se leen como uno repetido.
+   */
+  ogTitle?: string;
+  /** Fechas del artículo, para `article:published_time` de Open Graph. */
+  published?: string;
+  modified?: string;
 }): Metadata {
-  const { tenant, city, locale, title, description, path } = opts;
+  const { tenant, city, locale, title, description, path, ogTitle, published, modified } = opts;
   const origin = tenantOrigin(tenant);
   const url = `${origin}${localePath(locale, path)}`;
   const fullTitle = `${title} | ${tenant.brand}`;
+  const ogImage =
+    `${origin}/og?city=${city.slug}&locale=${locale}` +
+    (ogTitle ? `&title=${encodeURIComponent(ogTitle)}` : "");
 
   return {
     metadataBase: new URL(origin),
@@ -46,15 +60,10 @@ export function buildMetadata(opts: {
       url,
       siteName: tenant.brand,
       locale: OG_LOCALE[locale],
-      type: "website",
-      images: [
-        {
-          url: `${origin}/og?city=${city.slug}&locale=${locale}`,
-          width: 1200,
-          height: 630,
-          alt: title,
-        },
-      ],
+      ...(published
+        ? { type: "article" as const, publishedTime: published, modifiedTime: modified ?? published }
+        : { type: "website" as const }),
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: { card: "summary_large_image", title: fullTitle, description },
     robots: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
@@ -144,6 +153,102 @@ export function cityGraph(tenant: Tenant, city: CityWithCircumstances, locale: L
         organizer: { "@id": `${origin}/#organization` },
       },
     ],
+  };
+}
+
+/**
+ * Ficha de un post del blog.
+ *
+ * `BlogPosting` es lo que permite que Google muestre fecha y autoría, y lo que un
+ * motor generativo usa para saber que está citando un artículo con fecha y no una
+ * página estática. La imagen apunta a la OG generada al vuelo: es una URL real que
+ * devuelve un PNG de 1200×630, no un marcador.
+ */
+export function blogPostingGraph(opts: {
+  tenant: Tenant;
+  city: City;
+  locale: Locale;
+  slug: string;
+  title: string;
+  description: string;
+  published: string;
+  updated?: string;
+}) {
+  const { tenant, city, locale, slug, title, description, published, updated } = opts;
+  const origin = tenantOrigin(tenant);
+  const url = `${origin}${localePath(locale, `/blog/${slug}`)}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${url}#post`,
+    headline: title,
+    description,
+    inLanguage: HTML_LANG[locale],
+    datePublished: published,
+    dateModified: updated ?? published,
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    url,
+    image: {
+      "@type": "ImageObject",
+      url: `${origin}/og?city=${city.slug}&locale=${locale}&title=${encodeURIComponent(title)}`,
+      width: 1200,
+      height: 630,
+    },
+    author: { "@id": `${origin}/#organization` },
+    publisher: { "@id": `${origin}/#organization` },
+    isPartOf: {
+      "@type": "Blog",
+      "@id": `${origin}${localePath(locale, "/blog")}#blog`,
+      name: locale === "es" ? `Blog de ${tenant.brand}` : `${tenant.brand} blog`,
+    },
+    about: {
+      "@type": "Thing",
+      name:
+        locale === "es"
+          ? "Eclipse solar del 2 de agosto de 2027"
+          : "Solar eclipse of 2 August 2027",
+      sameAs: "https://en.wikipedia.org/wiki/Solar_eclipse_of_August_2,_2027",
+    },
+    spatialCoverage: {
+      "@type": "Place",
+      name: cityName(city, locale),
+      geo: { "@type": "GeoCoordinates", latitude: city.lat, longitude: city.lon },
+    },
+  };
+}
+
+/**
+ * El blog como colección.
+ *
+ * Se emite en el índice. `ItemList` con las URLs en orden es lo que hace que un
+ * crawler entienda el índice como una lista de artículos y no como una página
+ * cualquiera con enlaces.
+ */
+export function blogGraph(
+  tenant: Tenant,
+  locale: Locale,
+  posts: { slug: string; title: string; description: string; published: string }[],
+) {
+  const origin = tenantOrigin(tenant);
+  const url = `${origin}${localePath(locale, "/blog")}`;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "@id": `${url}#blog`,
+    url,
+    name: locale === "es" ? `Blog de ${tenant.brand}` : `${tenant.brand} blog`,
+    inLanguage: HTML_LANG[locale],
+    publisher: { "@id": `${origin}/#organization` },
+    blogPost: posts.map((p) => ({
+      "@type": "BlogPosting",
+      "@id": `${origin}${localePath(locale, `/blog/${p.slug}`)}#post`,
+      headline: p.title,
+      description: p.description,
+      datePublished: p.published,
+      url: `${origin}${localePath(locale, `/blog/${p.slug}`)}`,
+    })),
   };
 }
 

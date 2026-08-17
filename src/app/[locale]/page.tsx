@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection, AdSlot } from "@/components/AdSlot";
 import { Countdown } from "@/components/Countdown";
 import { Badge, Callout, Card, DataRow, Section } from "@/components/ui";
 import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
@@ -174,9 +174,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </section>
 
-      <Section>
-        <AdSlot name="header" locale={locale} />
-      </Section>
+      <AdSection name="header" locale={locale} />
 
       <Section title={t.home.dataTitle(name)}>
         <div className="grid gap-6 lg:grid-cols-3">
@@ -271,9 +269,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </p>
       </Section>
 
-      <Section>
-        <AdSlot name="inArticle" locale={locale} />
-      </Section>
+      <AdSection name="inArticle" locale={locale} />
 
       <Section title={t.home.planTitle}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -307,9 +303,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         </div>
       </Section>
 
-      <Section>
-        <AdSlot name="footer" locale={locale} />
-      </Section>
+      <AdSection name="footer" locale={locale} />
     </>
   );
 }

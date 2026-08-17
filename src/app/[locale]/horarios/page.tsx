@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection, AdSlot } from "@/components/AdSlot";
 import { Callout, Card, DataRow, Section } from "@/components/ui";
 import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, datasetGraph, jsonLd } from "@/lib/seo";
@@ -130,9 +130,7 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
         </div>
       </Section>
 
-      <Section>
-        <AdSlot name="inArticle" locale={locale} />
-      </Section>
+      <AdSection name="inArticle" locale={locale} />
 
       <Section
         title={locale === "es" ? "Horarios en otras localidades" : "Timings elsewhere"}

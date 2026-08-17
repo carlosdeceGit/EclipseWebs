@@ -31,6 +31,16 @@ export function adsenseClientId(): string | null {
   return process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID ?? null;
 }
 
+/**
+ * Cierto cuando este hueco tiene de verdad un anuncio que servir.
+ *
+ * Lo consultan las páginas antes de dibujar el contenedor del anuncio: si el hueco
+ * no está activo no se pinta nada, ni marcador ni sección vacía con su relleno.
+ */
+export function adSlotEnabled(name: AdSlotName): boolean {
+  return Boolean(adsenseClientId() && AD_SLOTS[name].id);
+}
+
 /** Tarifas de los anuncios propios, en euros. Se muestran en /anunciate. */
 export const OWN_AD_PRICING = [
   {

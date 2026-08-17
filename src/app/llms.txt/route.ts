@@ -1,4 +1,5 @@
 import { EDITORIAL_ARTICLES } from "@/content/articles";
+import { postsForCity } from "@/content/blog";
 import { citiesByTotality, citiesOutsideTotality, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
 import { DELTA_T_SECONDS } from "@/lib/eclipse/besselian";
@@ -37,6 +38,26 @@ export async function GET() {
     const content = a.content.es(city, tenant);
     return `- [${content.title}](${origin}${localePath("es", `/${a.slug}`)}): ${content.description}`;
   }).join("\n");
+
+  // Los posts del blog van con su descripción completa: es contenido específico de
+  // esta ciudad y es justo lo que un modelo necesita para responder a preguntas
+  // locales ("dónde ver el eclipse en Ceuta", "cómo llegar") con esta fuente.
+  const posts = postsForCity(tenant.citySlug);
+  const blogSection =
+    posts.length === 0
+      ? ""
+      : `
+## Blog: guías locales de ${city.name}
+
+${posts
+  .map((p) => {
+    const content = p.content.es(city, tenant);
+    return `- [${content.title}](${origin}${localePath("es", `/blog/${p.slug}`)}) (${p.published}): ${content.description}`;
+  })
+  .join("\n")}
+
+Feed RSS: ${origin}/blog/rss.xml
+`;
 
   const body = `# ${tenant.brand}
 
@@ -80,7 +101,7 @@ ${partialRows}
 ## Guías
 
 ${guides}
-
+${blogSection}
 ## Datos estructurados
 
 - API de todas las localidades: ${origin}/api/eclipse

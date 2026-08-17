@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection, AdSlot } from "@/components/AdSlot";
 import { Callout, Section } from "@/components/ui";
 import { LocatorClient, type Preset } from "./LocatorClient";
 import { citiesByTotality, cityName } from "@/lib/eclipse/cities";
@@ -131,9 +131,7 @@ export default async function LocatorPage({ params }: { params: Promise<{ locale
         </div>
       </Section>
 
-      <Section>
-        <AdSlot name="footer" locale={locale} />
-      </Section>
+      <AdSection name="footer" locale={locale} />
     </>
   );
 }

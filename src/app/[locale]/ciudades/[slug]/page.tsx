@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection, AdSlot } from "@/components/AdSlot";
 import { Callout, Card, DataRow, Section } from "@/components/ui";
 import { CITIES, getCity, cityName, formatDuration, formatObscuration, provinceName } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, cityGraph, jsonLd } from "@/lib/seo";
@@ -164,9 +164,7 @@ export default async function CityPage({
         </div>
       </Section>
 
-      <Section>
-        <AdSlot name="footer" locale={locale} />
-      </Section>
+      <AdSection name="footer" locale={locale} />
     </>
   );
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdSlot } from "@/components/AdSlot";
+import { AdSection } from "@/components/AdSlot";
 import { ListingCard } from "@/components/ListingCard";
 import { Badge, Callout, Card, Section } from "@/components/ui";
 import { DIRECTORY_CATEGORIES, getListings } from "@/lib/db/listings";
@@ -124,9 +124,7 @@ export default async function DirectoryPage({
         )}
       </Section>
 
-      <Section>
-        <AdSlot name="listing" locale={locale} />
-      </Section>
+      <AdSection name="listing" locale={locale} />
 
       <Section title={locale === "es" ? "¿Tienes un negocio en la zona?" : "Do you run a business here?"}>
         <div className="grid gap-6 lg:grid-cols-2">
