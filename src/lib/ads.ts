@@ -58,6 +58,26 @@ export function adsActive(): boolean {
   return Object.values(AD_SLOTS).some((slot) => Boolean(slot.id));
 }
 
+/**
+ * Quién pregunta por las cookies.
+ *
+ * - `"own"` (por defecto): nuestro banner es la barrera. No se descarga nada de
+ *   Google hasta que hay un sí explícito. Es lo más estricto con la AEPD y lo que
+ *   hay que dejar puesto mientras no haya un CMP certificado funcionando.
+ * - `"google"`: el CMP certificado de Google es la única pregunta. El script de
+ *   AdSense se carga en cuanto hay bloques, porque el mensaje de consentimiento
+ *   viaja dentro de ese script y sin él no habría nada que preguntar.
+ *
+ * Es una variable y no una constante a propósito: cambia el comportamiento legal
+ * de la web, así que hay que poder revertirlo con un redespliegue y sin tocar
+ * código el día que el mensaje de Google falle o se despublique.
+ */
+export type ConsentMode = "own" | "google";
+
+export function consentMode(): ConsentMode {
+  return process.env.NEXT_PUBLIC_CMP === "google" ? "google" : "own";
+}
+
 /** Tarifas de los anuncios propios, en euros. Se muestran en /anunciate. */
 export const OWN_AD_PRICING = [
   {

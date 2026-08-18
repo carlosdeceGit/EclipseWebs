@@ -32,8 +32,11 @@ export interface ConsentState {
  *
  * Súbela cuando cambien las finalidades o los proveedores: un consentimiento dado
  * para AdSense no cubre añadir después otra red publicitaria.
+ *
+ * v2: entra en juego el CMP certificado de Google, que es un proveedor con sus
+ * propias cookies. Los síes y noes anteriores dejan de valer.
  */
-export const CONSENT_VERSION = 1;
+export const CONSENT_VERSION = 2;
 
 export const CONSENT_STORAGE_KEY = "eclipse-consent";
 

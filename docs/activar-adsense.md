@@ -8,35 +8,42 @@ Hoy hay GitHub, Vercel y el dominio en GoDaddy. Con eso, lo que queda es:
 
 | # | Paso | Dónde | Bloquea a |
 | --- | --- | --- | --- |
-| 1 | Un buzón `contacto@` que reciba correo | GoDaddy / proveedor de correo | 2, 4 |
+| 1 | ~~Un buzón `contacto@` que reciba correo~~ **hecho** | Google Workspace | 2, 4 |
 | 2 | Dominio principal y DNS resueltos | Vercel + GoDaddy | 4 |
 | 3 | Contenido suficiente y original | repo | 4 |
 | 4 | Cuenta de AdSense y verificación del sitio | AdSense | 5, 6 |
 | 5 | CMP certificado por Google | AdSense | 6 |
 | 6 | IDs de bloque en variables de entorno | Vercel | — |
 
-Los pasos 1 a 3 se pueden hacer hoy. El 4 tarda entre unos días y unas semanas en
-resolverse por parte de Google, así que cuanto antes se envíe, mejor.
+El paso 1 ya está resuelto para `ceutaeclipse.es`. Los pasos 2 y 3 se pueden hacer hoy.
+El 4 tarda entre unos días y unas semanas en resolverse por parte de Google, así que
+cuanto antes se envíe, mejor.
 
 ---
 
 ## 1. El buzón de contacto
 
-**Es el bloqueo real, y es el paso más pequeño.** La LSSI (art. 10) exige un medio de
-contacto que funcione, y el revisor de AdSense comprueba que la página de contacto
-existe y es coherente. `src/lib/legal-entity.ts` ya publica `contacto@<dominio>` en
-`/aviso-legal`, `/privacidad` y `/contacto`: hoy esa dirección aparece en la web y no
-recibe nada, lo que es peor que no tenerla.
+**Resuelto para el dominio que está publicado.** `contacto@ceutaeclipse.es` existe y
+recibe correo, así que la dirección que la web lleva publicada desde el primer día ya
+responde. Eso desbloquea la revisión de AdSense para `ceutaeclipse.es`.
 
-Hacen falta cinco direcciones, aunque solo una bloquea hoy:
+La LSSI (art. 10) exige un medio de contacto que funcione, y el revisor de AdSense
+comprueba que la página de contacto existe y es coherente. `src/lib/legal-entity.ts`
+publica `contacto@<dominio>` en `/aviso-legal`, `/privacidad` y `/contacto`, derivándolo
+del tenant: cada web enseña el buzón de su propio dominio.
+
+Estado de las direcciones, una por dominio canónico de `TENANTS`:
 
 ```
-contacto@ceutaeclipse.es      ← el canónico, el único que bloquea ahora
-contacto@ceutaeclipse.com
-contacto@eclipsecadiz.com
-contacto@eclipsetarifa.com
-contacto@eclipsegibraltar.com
+contacto@ceutaeclipse.es      ✓ existe y recibe
+contacto@eclipsecadiz.es      pendiente, bloquea publicar ese dominio
+contacto@eclipsetarifa.es     pendiente, bloquea publicar ese dominio
+contacto@eclipsegibraltar.com pendiente, bloquea publicar ese dominio
 ```
+
+Ninguna de las pendientes bloquea nada **hoy**, porque esos dominios todavía no están
+publicados. Pero cada una tiene que existir antes de activar su web: la dirección se
+publica sola en cuanto el dominio entra en `TENANTS`.
 
 No hace falta un buzón real por dominio: basta con que el correo acabe en una bandeja
 que se lea.
@@ -373,7 +380,7 @@ enviado por correo ordinario al llegar al umbral de 10 €. Dos avisos:
 
 Antes de enviar a revisión:
 
-- [ ] `contacto@ceutaeclipse.es` recibe correo de verdad (probado enviando uno)
+- [x] `contacto@ceutaeclipse.es` recibe correo de verdad (probado enviando uno)
 - [ ] `ceutaeclipse.es` es el dominio principal en Vercel y `www` redirige a él
 - [ ] `https://ceutaeclipse.es/ads.txt` responde 200 con la línea de `google.com`
 - [ ] `https://ceutaeclipse.es/robots.txt` y `/sitemap.xml` responden
