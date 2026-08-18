@@ -619,6 +619,9 @@ Cosas que conviene no romper:
 - **CMP certificado por Google** antes de encender los bloques de anuncios. El banner actual
   cumple con la AEPD pero no es un CMP de IAB TCF v2.2, que es lo que exige la política de
   consentimiento de la UE de Google. Detalle y opciones en `docs/activar-adsense.md` §5.
+  Del CMP propio de Google hay que elegir el mensaje de **tres opciones** (consentir, no
+  consentir, gestionar): el de dos esconde el rechazo tras «Gestionar opciones» y la AEPD
+  exige que rechazar esté en la primera capa y con la misma visibilidad que aceptar.
 - Marcar `ceutaeclipse.es` como dominio principal en Vercel, para que redirija `www` y no al
   contrario.
 - **Publicar Cádiz, Tarifa y Gibraltar**: el contenido ya está, falta apuntar el DNS al

@@ -262,7 +262,28 @@ Google exige uno para servir anuncios a visitantes del EEE y Reino Unido. Es dec
 podemos estar perfectamente en regla con la AEPD y aun así no cumplir el contrato de
 AdSense. Son dos requisitos distintos y hay que satisfacer los dos.
 
-Dos caminos:
+### Qué mensaje elegir en el panel de Google
+
+Google ofrece dos formatos de su propio CMP, y **solo uno vale en España**:
+
+| Formato | Primera capa | ¿Vale? |
+| --- | --- | --- |
+| Dos opciones: *Consentir* y *Gestionar opciones* | No hay botón de rechazar | **No** |
+| Tres opciones: *Consentir*, *No consentir* y *Gestionar opciones* | Aceptar y rechazar al mismo nivel | Sí |
+
+La guía de cookies de la AEPD exige que rechazar esté **en la primera capa y con la
+misma visibilidad que aceptar**, sin mandar al usuario a otra capa para hacerlo, y
+sin destacar un botón sobre el otro. El formato de dos opciones esconde el rechazo
+detrás de «Gestionar opciones», que es exactamente el patrón que la guía prohíbe.
+
+Es además la misma regla que ya cumple nuestro banner y que está escrita en el
+proyecto: rechazar tiene que costar lo mismo que aceptar. Elegir el de dos opciones
+sería incumplir con la AEPD por decisión propia, y a cambio de nada: la diferencia de
+ingresos entre uno y otro no compensa una sanción.
+
+**Marcar la tercera opción del panel: «tres opciones».**
+
+Dos caminos para el CMP:
 
 - **Mensaje de GDPR de Google** (*AdSense → Privacidad y mensajes*). Gratis,
   certificado y sin código. Es lo que recomendaría: resuelve el requisito de Google
