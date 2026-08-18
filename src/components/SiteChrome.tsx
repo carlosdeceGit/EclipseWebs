@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CookieSettingsLink } from "./CookieConsent";
+import { consentMode } from "@/lib/ads";
 import { allCities } from "@/lib/eclipse/cities";
 import { TENANTS, type Tenant } from "@/lib/tenants";
 import type { CityWithCircumstances, Locale } from "@/lib/eclipse/types";
@@ -184,7 +185,11 @@ export function Footer({ tenant, locale }: { tenant: Tenant; locale: Locale }) {
               </li>
             ))}
             <li>
-              <CookieSettingsLink label={CONSENT_LABEL[locale]} />
+              <CookieSettingsLink
+                label={CONSENT_LABEL[locale]}
+                mode={consentMode()}
+                policyHref={localePath(locale, "/cookies")}
+              />
             </li>
           </ul>
         </div>

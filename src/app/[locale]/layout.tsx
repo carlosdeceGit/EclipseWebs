@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import "../globals.css";
 import { Footer, Header } from "@/components/SiteChrome";
 import { CookieConsent } from "@/components/CookieConsent";
-import { adsActive, adsenseClientId } from "@/lib/ads";
+import { adsActive, adsenseClientId, consentMode } from "@/lib/ads";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity, tenantOrigin } from "@/lib/tenants";
 import { getDictionary } from "@/i18n/dictionary";
@@ -99,6 +99,7 @@ export default async function LocaleLayout({
           locale={locale}
           adsenseClientId={adsense}
           policyHref={localePath(locale, "/cookies")}
+          mode={consentMode()}
         />
       </body>
     </html>

@@ -371,6 +371,26 @@ certificado por Google.
   marcarlos mal hunde el dominio entero.
 - RLS de Supabase impide que un usuario se autoasigne nivel de pago o se autoapruebe.
 
+### Quién pregunta: `NEXT_PUBLIC_CMP`
+
+`consentMode()` decide quién pide el consentimiento, y cambia el comportamiento legal
+de la web:
+
+| Valor | Quién pregunta | Cuándo carga el script de Google |
+| --- | --- | --- |
+| vacío (por defecto) | nuestro banner | solo tras un sí explícito |
+| `google` | el CMP certificado de Google | desde el principio |
+
+Con `google` el script se carga sin esperar **a propósito**: el mensaje de
+consentimiento de Google viaja dentro de ese script, así que bloquearlo sería impedir
+que se pregunte. A cambio se obtiene una sola pregunta y la señal TCF v2.2 que Google
+exige. Es una variable y no una constante para poder volver atrás con un redespliegue
+el día que el mensaje de Google falle o se despublique.
+
+**Solo poner `google` cuando el mensaje esté creado y publicado para ese dominio**, y
+con el formato de tres opciones. Con la variable puesta y sin mensaje publicado, la
+web cargaría Google sin preguntar nada.
+
 ### Consentimiento de cookies
 
 `src/components/CookieConsent.tsx` es quien monta el script de AdSense, **no el layout**.

@@ -9,6 +9,7 @@ import {
   type ConsentState,
   type ConsentValue,
 } from "@/lib/consent";
+import type { ConsentMode } from "@/lib/ads";
 import type { Locale } from "@/lib/eclipse/types";
 
 const COPY = {
@@ -60,11 +61,13 @@ export function CookieConsent({
   locale,
   adsenseClientId,
   policyHref,
+  mode = "own",
 }: {
   locale: Locale;
   /** Null mientras AdSense no esté configurado: entonces no hay nada que consentir. */
   adsenseClientId: string | null;
   policyHref: string;
+  mode?: ConsentMode;
 }) {
   const t = COPY[locale];
   const [state, setState] = useState<ConsentState | null>(null);
@@ -73,14 +76,24 @@ export function CookieConsent({
   const [showSettings, setShowSettings] = useState(false);
   const [draft, setDraft] = useState<ConsentValue>("denied");
 
+  /**
+   * Con el CMP de Google al mando, este componente deja de preguntar.
+   *
+   * Preguntar dos veces por lo mismo no solo es molesto: deja al visitante sin
+   * saber cuál de las dos decisiones manda. Aquí manda la de Google, que es la
+   * certificada y la que emite la señal TCF que Google exige.
+   */
+  const googleCmp = mode === "google" && Boolean(adsenseClientId);
+
   useEffect(() => {
+    if (googleCmp) return;
     const stored = readConsent();
     setState(stored);
     setDraft(stored?.advertising ?? "denied");
     // Sin AdSense configurado no hay ninguna cookie no esencial, así que preguntar
     // sería pedir permiso para nada.
     if (!stored && adsenseClientId) setShowBanner(true);
-  }, [adsenseClientId]);
+  }, [adsenseClientId, googleCmp]);
 
   useEffect(() => {
     const open = () => {
@@ -101,7 +114,12 @@ export function CookieConsent({
 
   return (
     <>
-      {adsAllowed && (
+      {/*
+        En modo Google el script se carga sin esperar, porque el mensaje de
+        consentimiento viaja dentro de él: bloquearlo sería impedir que se pregunte.
+        En modo propio sigue esperando al sí explícito, como hasta ahora.
+      */}
+      {(googleCmp || adsAllowed) && (
         <Script
           async
           strategy="afterInteractive"
@@ -110,7 +128,7 @@ export function CookieConsent({
         />
       )}
 
-      {showBanner && !showSettings && (
+      {!googleCmp && showBanner && !showSettings && (
         <div
           role="dialog"
           aria-modal="false"
@@ -163,7 +181,7 @@ export function CookieConsent({
         </div>
       )}
 
-      {showSettings && (
+      {!googleCmp && showSettings && (
         <div
           className="fixed inset-0 z-[110] flex items-end justify-center p-4 sm:items-center"
           style={{ background: "hsl(224 44% 4% / 0.7)" }}
@@ -245,16 +263,55 @@ export function CookieConsent({
   );
 }
 
-/** Enlace del pie que reabre el panel. Retirar el consentimiento debe ser fácil. */
-export function CookieSettingsLink({ label }: { label: string }) {
+/**
+ * Enlace del pie que reabre el panel de consentimiento.
+ *
+ * Retirar el consentimiento tiene que ser tan fácil como darlo, así que este enlace
+ * no puede quedarse nunca sin hacer nada. En modo Google llama a la API de
+ * revocación de su CMP; si el CMP todavía no ha cargado, se encola; y si no hay CMP
+ * en absoluto —bloqueador de anuncios, mensaje despublicado— cae a la política de
+ * cookies, que explica cómo gestionarlas. Un botón muerto aquí sería un
+ * incumplimiento en sí mismo.
+ */
+export function CookieSettingsLink({
+  label,
+  mode = "own",
+  policyHref = "/cookies",
+}: {
+  label: string;
+  mode?: ConsentMode;
+  policyHref?: string;
+}) {
+  const open = useCallback(() => {
+    if (mode !== "google") {
+      window.dispatchEvent(new CustomEvent(CONSENT_OPEN_EVENT));
+      return;
+    }
+
+    const fc = (window as unknown as { googlefc?: GoogleFundingChoices }).googlefc;
+    if (fc?.showRevocationMessage) {
+      fc.showRevocationMessage();
+      return;
+    }
+    if (fc?.callbackQueue) {
+      fc.callbackQueue.push({
+        CONSENT_DATA_READY: () =>
+          (window as unknown as { googlefc?: GoogleFundingChoices }).googlefc?.showRevocationMessage?.(),
+      });
+      return;
+    }
+    window.location.href = policyHref;
+  }, [mode, policyHref]);
+
   return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent(CONSENT_OPEN_EVENT))}
-      className="hover:underline"
-      style={{ color: "hsl(var(--muted))" }}
-    >
+    <button type="button" onClick={open} className="hover:underline" style={{ color: "hsl(var(--muted))" }}>
       {label}
     </button>
   );
+}
+
+/** Lo poco que usamos de la API del CMP de Google (Funding Choices). */
+interface GoogleFundingChoices {
+  showRevocationMessage?: () => void;
+  callbackQueue?: { push: (cb: { CONSENT_DATA_READY: () => void }) => void };
 }
