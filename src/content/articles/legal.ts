@@ -137,6 +137,21 @@ export const privacidad: Article = {
           type: "p",
           text: "El localizador calcula las circunstancias del eclipse en tu posición dentro de la propia petición, y no guardamos las coordenadas que introduzcas ni la ubicación que comparta tu dispositivo.",
         },
+        { type: "h3", text: "Visor solar con cámara" },
+        {
+          type: "p",
+          text: "El localizador incluye un visor de realidad aumentada que superpone la posición del Sol sobre la imagen de la cámara trasera para que compruebes si algún obstáculo te la va a tapar. Funciona entero dentro de tu navegador.",
+        },
+        {
+          type: "ul",
+          items: [
+            "**No grabamos la imagen de la cámara.** El vídeo se muestra en pantalla y nada más: no hay captura, no se guarda ningún fotograma y no se envía ninguna imagen a este servidor ni a terceros.",
+            "**Las lecturas de la brújula y del acelerómetro se procesan en tu navegador** para calcular hacia dónde apunta el teléfono. No se transmiten ni se almacenan.",
+            "**Al cerrar el visor se detienen inmediatamente todas las pistas de la cámara**, que es lo que apaga el indicador de cámara activa del sistema. Lo mismo ocurre si sales de la página.",
+            "**Las coordenadas no se guardan**: se usan para pedir el cálculo del eclipse a nuestra API y se descartan al terminar la petición.",
+            "El navegador te pedirá permiso por separado para la cámara y para los sensores de orientación. Puedes denegarlos: el visor funciona igual con ajuste manual, y sin cámara sencillamente no se abre.",
+          ],
+        },
         { type: "h2", text: "Plazos de conservación" },
         {
           type: "p",
@@ -186,6 +201,21 @@ export const privacidad: Article = {
         {
           type: "p",
           text: "The locator computes eclipse circumstances for your position within the request itself, and we do not store the coordinates you enter or the location your device shares.",
+        },
+        { type: "h3", text: "Camera sun viewer" },
+        {
+          type: "p",
+          text: "The locator includes an augmented-reality viewer that overlays the Sun's position on the rear camera image so you can check whether anything will block it. It runs entirely inside your browser.",
+        },
+        {
+          type: "ul",
+          items: [
+            "**We do not record the camera image.** The video is displayed on screen and nothing else: no capture, no frame is stored, and no image is sent to this server or to any third party.",
+            "**Compass and accelerometer readings are processed in your browser** to work out where the phone is pointing. They are neither transmitted nor stored.",
+            "**Closing the viewer stops every camera track immediately**, which is what turns off your system's camera indicator. The same happens if you leave the page.",
+            "**Coordinates are not stored**: they are used to ask our API for the eclipse computation and discarded when the request ends.",
+            "Your browser will ask for camera and orientation-sensor permission separately. You may refuse: the viewer still works with manual adjustment, and without the camera it simply does not open.",
+          ],
         },
         { type: "h2", text: "Retention" },
         {

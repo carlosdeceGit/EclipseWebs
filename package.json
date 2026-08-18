@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "validate:viewer": "tsx scripts/validate-solar-viewer.ts",
     "agents:run": "tsx agents/run.ts",
     "agents:list": "tsx agents/run.ts --list"
   },
