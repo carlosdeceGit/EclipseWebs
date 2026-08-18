@@ -8,6 +8,7 @@ import { DIRECTORY_CATEGORIES, getListings } from "@/lib/db/listings";
 import { buildMetadata } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
+import { scopeOf } from "@/lib/db/scope";
 import { cityName } from "@/lib/eclipse/cities";
 import { isLocale, localePath } from "@/i18n/config";
 
@@ -55,7 +56,7 @@ export default async function DirectoryPage({
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
   const name = cityName(city, locale);
-  const listings = await getListings({ kind: "directory", citySlug: city.slug, category: cat });
+  const listings = await getListings(scopeOf(tenant), { kind: "directory", category: cat });
 
   return (
     <>

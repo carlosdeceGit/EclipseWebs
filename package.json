@@ -9,6 +9,9 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
+    "validate": "tsx scripts/validate-eclipse.ts",
+    "check:scope": "tsx scripts/check-tenant-scope.ts",
+    "check": "npm run typecheck && npm run validate && npm run check:scope",
     "agents:run": "tsx agents/run.ts",
     "agents:list": "tsx agents/run.ts --list"
   },

@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      - name: Tipos
+        run: npm run typecheck
+
+      # Regla 2 del proyecto: si el cálculo no valida, ningún dato de la web es
+      # fiable y no tiene sentido desplegar.
+      - name: Validar el cálculo del eclipse
+        run: npm run validate
+
+      # Que ceutaeclipse.es no pueda servir lo de Cádiz, y viceversa.
+      - name: Aislamiento entre dominios
+        run: npm run check:scope
+
+      - name: Construir
+        run: npm run build

@@ -1,4 +1,5 @@
 import { publicClient } from "./supabase";
+import type { TenantScope } from "./scope";
 
 /**
  * Directorio de negocios y tablón de clasificados.
@@ -52,26 +53,48 @@ export interface Listing {
 }
 
 /**
- * Anuncios publicados de una ciudad.
+ * El único punto del código que consulta `listings` para el público.
+ *
+ * Aplica los tres filtros no negociables —ciudad, tipo y estado— antes de
+ * devolver nada, de modo que ninguna función de arriba pueda olvidarse de uno.
+ * El ámbito llega como `TenantScope`, que solo se emite desde el `Host` de la
+ * petición: no hay forma de pedir los anuncios de otra ciudad sin cambiar este
+ * fichero a conciencia.
+ *
+ * `scripts/check-tenant-scope.ts` comprueba en CI que sigue habiendo exactamente
+ * una llamada a `.from("listings")` aquí y que lleva su filtro de ciudad pegado.
+ */
+function approvedInCity(
+  scope: TenantScope,
+  kind: ListingKind,
+  columns: string,
+  options?: { count: "exact"; head: boolean },
+) {
+  const supabase = publicClient();
+  if (!supabase) return null;
+
+  return supabase
+    .from("listings")
+    .select(columns, options)
+    .eq("city_slug", scope.citySlug)
+    .eq("kind", kind)
+    .eq("status", "approved");
+}
+
+/**
+ * Anuncios publicados de la ciudad del dominio.
  *
  * Los destacados van primero porque es exactamente lo que se paga. Dentro de cada
  * nivel, el más reciente arriba.
  */
-export async function getListings(opts: {
-  kind: ListingKind;
-  citySlug: string;
-  category?: string;
-  limit?: number;
-}): Promise<Listing[]> {
-  const supabase = publicClient();
-  if (!supabase) return [];
+export async function getListings(
+  scope: TenantScope,
+  opts: { kind: ListingKind; category?: string; limit?: number },
+): Promise<Listing[]> {
+  let query = approvedInCity(scope, opts.kind, "*");
+  if (!query) return [];
 
-  let query = supabase
-    .from("listings")
-    .select("*")
-    .eq("kind", opts.kind)
-    .eq("city_slug", opts.citySlug)
-    .eq("status", "approved")
+  query = query
     .order("tier_rank", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(opts.limit ?? 50);
@@ -83,20 +106,14 @@ export async function getListings(opts: {
     console.error("[listings] consulta fallida:", error.message);
     return [];
   }
-  return (data ?? []) as Listing[];
+  return (data ?? []) as unknown as Listing[];
 }
 
-export async function countListings(kind: ListingKind, citySlug: string): Promise<number> {
-  const supabase = publicClient();
-  if (!supabase) return 0;
+export async function countListings(scope: TenantScope, kind: ListingKind): Promise<number> {
+  const query = approvedInCity(scope, kind, "id", { count: "exact", head: true });
+  if (!query) return 0;
 
-  const { count, error } = await supabase
-    .from("listings")
-    .select("id", { count: "exact", head: true })
-    .eq("kind", kind)
-    .eq("city_slug", citySlug)
-    .eq("status", "approved");
-
+  const { count, error } = await query;
   if (error) return 0;
   return count ?? 0;
 }

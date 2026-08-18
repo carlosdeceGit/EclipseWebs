@@ -189,6 +189,7 @@ src/
       types.ts
     db/
       supabase.ts          clientes, degradan a null sin variables
+      scope.ts             ámbito de ciudad; sin él no se consulta nada
       listings.ts          directorio y clasificados
   content/
     faq.ts                 FAQ bilingües
@@ -226,6 +227,31 @@ curl -o /dev/null -w "%{http_code}\n" -H "Host: eclipsecadiz.es"  localhost:3000
 ```
 
 `localhost` cae al tenant «hub», así que la web es navegable sin tocar `/etc/hosts`.
+
+### Aislamiento entre dominios
+
+Los anuncios, los clasificados y los eventos pertenecen a una ciudad (`city_slug`).
+Que en `ceutaeclipse.es` no aparezca lo de Cádiz **no depende de acordarse de filtrar**:
+
+1. **`TenantScope`** (`src/lib/db/scope.ts`) es un tipo con marca. Solo lo emiten
+   `currentScope()` y `scopeOf(tenant)`, y las dos derivan la ciudad del `Host`. No se
+   puede fabricar uno a partir de un string, así que no se puede pedir otra ciudad
+   por descuido.
+2. **Un único punto consulta la tabla.** `approvedInCity()` en `listings.ts` aplica
+   ciudad, tipo y estado en la misma cadena. Las funciones públicas exigen el ámbito,
+   así que el compilador rechaza una consulta sin él.
+3. **`scripts/check-tenant-scope.ts`** vuelve a comprobarlo después, sobre el código:
+   qué ficheros pueden nombrar las tablas, que el filtro siga pegado al `from`, que
+   las funciones sigan pidiendo ámbito y que el alta selle la ciudad en el servidor.
+   Corre en CI. Es la misma idea que `agents/guardrails.ts`: el tipo es la intención,
+   el script es la barrera.
+
+Está verificado provocando las dos regresiones —quitar el filtro y consultar la tabla
+desde una página— y comprobando que el script falla en ambas.
+
+Una base de datos por dominio se descartó a propósito: multiplica el esquema, las
+políticas RLS y las credenciales de los agentes por cada ciudad, y rompe el portal
+agregador de §2. El aislamiento que hacía falta es éste, y es gratis.
 
 ### Idiomas
 
@@ -303,10 +329,10 @@ Medido sobre los cuatro dominios en producción, como fracción de frases idént
 | `/guia` | 66–69 % | Qué es un eclipse: universal, con cierre local |
 | `/fuentes` | 68 % | Método de cálculo: es el mismo, y debe serlo |
 | `/gafas-de-eclipse` | 75 % | Normativa europea: es la misma |
-| `/seguridad` | 76 % | **No se toca.** Ver regla 7 |
+| `/seguridad` | 76 % | **No se toca.** Ver regla 8 |
 
 Las cuatro últimas son conocimiento universal y **no deben diferenciarse por SEO**: variar
-la guía de seguridad para posicionar es exactamente lo que prohíbe la regla 7. Si Google
+la guía de seguridad para posicionar es exactamente lo que prohíbe la regla 8. Si Google
 llega a filtrarlas, la solución correcta es un `canonical` cruzado hacia un dominio de
 referencia, no reescribirlas.
 
@@ -491,7 +517,9 @@ npm install
 npm run dev                          # http://localhost:3000
 npm run build
 npm run typecheck
-npx tsx scripts/validate-eclipse.ts  # OBLIGATORIO tras tocar besselian.ts
+npm run validate                     # OBLIGATORIO tras tocar besselian.ts
+npm run check:scope                  # aislamiento entre dominios
+npm run check                        # las tres de golpe, como en CI
 npm run agents:list
 ```
 
@@ -511,8 +539,10 @@ Cosas que conviene no romper:
 4. **Los guardarraíles no son opcionales**: un agente que escribe algo nuevo necesita su
    validador en `guardrails.ts` antes que su función en `store.ts`.
 5. **`rel="sponsored nofollow"`** en todo enlace comercial saliente.
-6. **No duplicar contenido entre dominios propios.**
-7. **La guía de seguridad no se suaviza por motivos comerciales.**
+6. **Ninguna consulta de datos sin `TenantScope`.** Si añades una tabla por ciudad,
+   añade también su regla en `scripts/check-tenant-scope.ts`.
+7. **No duplicar contenido entre dominios propios.**
+8. **La guía de seguridad no se suaviza por motivos comerciales.**
 
 ---
 
