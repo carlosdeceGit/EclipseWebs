@@ -190,11 +190,17 @@ correo de `/contacto` recibe (paso 1).
 3. En *Vercel → Settings → Environment Variables*, poner en **Production**:
 
    ```
-   NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-XXXXXXXXXXXXXXXX
+   NEXT_PUBLIC_ADSENSE_CLIENT_ID=ca-pub-1380381573272514
    ```
 
    El prefijo `ca-` va aquí, y solo aquí. En `ads.txt` la línea lleva `pub-…` sin
    `ca-`; la ruta lo quita sola, así que no hay que pensarlo.
+
+   **Poner solo esta variable es seguro**, y es exactamente lo que toca mientras
+   Google revisa: `/ads.txt` empieza a publicar el identificador, pero no aparece el
+   banner de cookies, no se carga el script de Google y no se instala ninguna cookie
+   de terceros. Todo eso espera a que exista además algún ID de bloque (paso 6), que
+   es cuando hay de verdad una finalidad que consentir.
 4. **Redesplegar.** Las variables `NEXT_PUBLIC_` se incrustan en tiempo de build: si
    no se vuelve a construir, el valor no existe en el sitio publicado.
 5. Verificar el sitio **por el método de `ads.txt`**, no por el fragmento de código.
@@ -210,7 +216,7 @@ correo de `/contacto` recibe (paso 1).
 
    ```bash
    curl https://ceutaeclipse.es/ads.txt
-   # google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0
+   # google.com, pub-1380381573272514, DIRECT, f08c47fec0942fa0
    ```
 
    Tiene que responder **200 en el ápex, sin redirección**. Si devuelve 404, falta la

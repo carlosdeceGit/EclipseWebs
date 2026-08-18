@@ -352,9 +352,13 @@ que falta es el buzón `contacto@`, la cuenta de AdSense y un CMP certificado po
   El coste asumido es un salto de layout **el día de activar** —y solo ese día— en lugar de
   recuadros vacíos de aquí a entonces. Con el hueco activo sí se reserva la altura, que es
   lo que evita el salto mientras carga cada anuncio.
-- Sin `NEXT_PUBLIC_ADSENSE_CLIENT_ID` no se carga el script de Google, no se instala ninguna
-  cookie de terceros y `/ads.txt` devuelve 404. Eso permite desplegar antes de tener AdSense
-  aprobado.
+- Sin `NEXT_PUBLIC_ADSENSE_CLIENT_ID` no hay publicidad de ninguna clase y `/ads.txt`
+  devuelve 404. Eso permite desplegar antes de tener AdSense aprobado.
+- **El ID de cliente y la publicidad activa son dos cosas distintas**, y `adsActive()` las
+  separa. Con solo el cliente configurado, `/ads.txt` publica el identificador —que es como
+  Google verifica la propiedad del dominio, semanas antes de encender nada— pero no aparece
+  el banner de cookies ni se carga el script de Google. Eso espera a que exista además algún
+  ID de bloque: no se pide consentimiento para una finalidad que todavía no existe.
 - **`/ads.txt` se genera por tenant** desde el ID de cliente. Además de ser obligatorio para
   que Google autorice el inventario, es el método de verificación de propiedad que **no
   carga nada en el navegador**, al contrario que el fragmento de código en el `<head>`: es

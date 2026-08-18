@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import "../globals.css";
 import { Footer, Header } from "@/components/SiteChrome";
 import { CookieConsent } from "@/components/CookieConsent";
-import { adsenseClientId } from "@/lib/ads";
+import { adsActive, adsenseClientId } from "@/lib/ads";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity, tenantOrigin } from "@/lib/tenants";
 import { getDictionary } from "@/i18n/dictionary";
@@ -57,7 +57,11 @@ export default async function LocaleLayout({
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
   const t = getDictionary(locale);
-  const adsense = adsenseClientId();
+  // Solo se le pasa el cliente al banner cuando hay un bloque que servir. Con la
+  // cuenta recién dada de alta y ningún bloque creado todavía, `ads.txt` ya publica
+  // el identificador —que es lo que Google necesita para verificar el dominio— pero
+  // no se pregunta nada al visitante ni se carga nada de Google.
+  const adsense = adsActive() ? adsenseClientId() : null;
 
   return (
     <html lang={HTML_LANG[locale]} style={{ ["--accent" as string]: tenant.accentHsl }}>

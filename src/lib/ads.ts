@@ -41,6 +41,23 @@ export function adSlotEnabled(name: AdSlotName): boolean {
   return Boolean(adsenseClientId() && AD_SLOTS[name].id);
 }
 
+/**
+ * Cierto cuando hay publicidad de verdad: cliente **y** al menos un bloque.
+ *
+ * Separa dos cosas que el ID de cliente confundía. `ads.txt` lo necesita en cuanto
+ * existe la cuenta, porque es como se verifica la propiedad del dominio ante Google
+ * y eso ocurre semanas antes de encender nada. El banner de cookies y el script de
+ * Google, en cambio, solo tienen sentido cuando hay un bloque que servir.
+ *
+ * Sin esta distinción, dar de alta la cuenta haría aparecer el banner pidiendo
+ * consentimiento para una finalidad que todavía no existe, y cargaría el script de
+ * Google a quien aceptara sin que hubiera un solo anuncio que mostrar.
+ */
+export function adsActive(): boolean {
+  if (!adsenseClientId()) return false;
+  return Object.values(AD_SLOTS).some((slot) => Boolean(slot.id));
+}
+
 /** Tarifas de los anuncios propios, en euros. Se muestran en /anunciate. */
 export const OWN_AD_PRICING = [
   {
