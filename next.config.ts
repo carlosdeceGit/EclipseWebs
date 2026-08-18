@@ -18,6 +18,19 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          // El visor solar del localizador necesita cámara y sensores de orientación,
+          // y la geolocalización la usa el propio localizador. Se conceden solo al
+          // propio dominio: ningún iframe de terceros —el de la publicidad, sin ir
+          // más lejos— hereda estos permisos.
+          //
+          // Declarar la política no activa nada: el navegador sigue pidiendo permiso
+          // al usuario para cada una. Lo que hace es que sin ella algunos navegadores
+          // los denieguen de antemano.
+          {
+            key: "Permissions-Policy",
+            value:
+              "camera=(self), geolocation=(self), accelerometer=(self), gyroscope=(self), magnetometer=(self), microphone=()",
+          },
         ],
       },
       {

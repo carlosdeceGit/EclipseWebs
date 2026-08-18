@@ -145,6 +145,28 @@ Málaga está en el borde norte, donde la duración varía muy deprisa con la po
 Comprobación geométrica independiente: la anchura de la franja calculada en el punto de
 máximo es **258,8 km** frente a los **257,7 km** de la NASA.
 
+### El visor solar de realidad aumentada
+
+`/localizador` ofrece, cuando ya hay un resultado, un visor que superpone la posición
+del Sol en el máximo sobre la imagen de la cámara trasera. Sirve para lo que ninguna
+tabla resuelve: si desde ese balcón concreto un edificio se va a interponer.
+
+No añade ni un dato nuevo. El azimut y la altura salen del mismo cálculo besseliano;
+`src/lib/eclipse/solar-viewer.ts` solo compara esa dirección con hacia dónde apunta el
+teléfono. Cuatro cosas que no conviene revertir:
+
+- **El rumbo se calcula con los tres ángulos**, no con `360 − alpha`. Esa simplificación
+  solo vale con el móvil plano sobre una mesa, y aquí se usa levantado apuntando al cielo.
+  En iOS la referencia absoluta es `webkitCompassHeading`, que se convierte a `alpha`
+  antes de entrar en la misma matemática.
+- **El modo manual es obligatorio.** Hay móviles sin magnetómetro y WebViews que no
+  entregan rumbo absoluto: el visor se abre igual y el rumbo se ajusta a mano. Si en ocho
+  segundos no ha llegado un rumbo absoluto, cambia solo.
+- **El campo visual es una aproximación declarada**: el navegador no expone la distancia
+  focal de forma portable. Está documentado en el módulo y es deliberadamente estrecho.
+- **La cámara no graba nada.** El stream se pinta y se para al cerrar. Sin canvas, sin
+  captura y sin subida — y eso es exactamente lo que dice `/privacidad`.
+
 ### Margen de error que declaramos
 
 - Duraciones: fiables dentro de unos segundos.
@@ -185,6 +207,7 @@ src/
     eclipse/
       besselian.ts         EL CÁLCULO. No tocar sin correr la validación.
       cities.ts            registro de localidades (solo lo no calculable)
+      solar-viewer.ts      geometría del visor AR: rumbo, elevación y proyección
       event.ts             datos del evento independientes de la localidad
       types.ts
     db/
@@ -202,6 +225,7 @@ src/
   app/
     [locale]/              todas las páginas
     [locale]/blog/         índice del blog y página de cada post
+    [locale]/localizador/  localizador y visor AR de cámara (cliente)
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
     og/                    imagen social generada al vuelo
@@ -210,6 +234,7 @@ src/
     llms.txt, robots.ts, sitemap.ts
 agents/                    sistema de agentes autónomos
 scripts/validate-eclipse.ts
+scripts/validate-solar-viewer.ts
 supabase/schema.sql
 docs/negocio-gafas.md
 ```
@@ -607,6 +632,7 @@ npm run dev                          # http://localhost:3000
 npm run build
 npm run typecheck
 npx tsx scripts/validate-eclipse.ts  # OBLIGATORIO tras tocar besselian.ts
+npm run validate:viewer              # OBLIGATORIO tras tocar solar-viewer.ts
 npm run agents:list
 ```
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Locale } from "@/lib/eclipse/types";
 import type { Dictionary } from "@/i18n/dictionary";
+import { SolarARViewer } from "./SolarARViewer";
 
 /**
  * Sustituye marcadores `{clave}` en una plantilla.
@@ -272,6 +273,19 @@ export function LocatorClient({
             </p>
           )}
         </div>
+      )}
+
+      {/* El visor de cámara solo aparece con un resultado en la mano: sin azimut, sin
+          altura y sin hora del máximo no hay nada que apuntar. Si el Sol está bajo el
+          horizonte tampoco tiene sentido abrir la cámara. */}
+      {result && result.contactsLocal.maximum && result.sunAltitudeDeg > 0 && (
+        <SolarARViewer
+          locale={locale}
+          sunAzimuthDeg={result.sunAzimuthDeg}
+          sunAltitudeDeg={result.sunAltitudeDeg}
+          maximumTime={result.contactsLocal.maximum}
+          timeZone={result.contactsLocal.timeZone}
+        />
       )}
     </div>
   );
