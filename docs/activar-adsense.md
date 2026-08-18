@@ -203,16 +203,28 @@ correo de `/contacto` recibe (paso 1).
    es cuando hay de verdad una finalidad que consentir.
 4. **Redesplegar.** Las variables `NEXT_PUBLIC_` se incrustan en tiempo de build: si
    no se vuelve a construir, el valor no existe en el sitio publicado.
-5. Verificar el sitio **por el método de `ads.txt`**, no por el fragmento de código.
+5. Verificar el sitio con la **etiqueta meta** o con **`ads.txt`**. Con cualquiera de
+   las dos, no con el fragmento de código.
 
-   Esto importa. Google ofrece tres formas de verificar la propiedad: pegar su script
-   en el `<head>`, un `<meta>`, o el archivo `ads.txt`. Las dos primeras cargan o
-   anuncian a Google antes de que el visitante haya consentido nada, que es
-   exactamente lo que la arquitectura de consentimiento de este proyecto evita. La de
-   `ads.txt` no carga nada en el navegador, y la ruta `/ads.txt` ya emite la línea
-   que Google espera en cuanto existe la variable del paso 3.
+   Google ofrece tres métodos y solo uno es incompatible con la arquitectura de
+   consentimiento de este proyecto:
 
-   Comprobación después de desplegar:
+   | Método | ¿Carga algo en el navegador? | ¿Sirve aquí? |
+   | --- | --- | --- |
+   | Fragmento de código de AdSense | Sí, el script de Google en todas las páginas | **No** |
+   | Etiqueta `<meta>` | No, es HTML inerte | Sí |
+   | Fragmento de `ads.txt` | No, es un archivo de texto | Sí |
+
+   Las dos válidas ya están implementadas y **salen las dos de la misma variable del
+   paso 3**: la ruta `/ads.txt` emite la línea que Google espera, y el layout emite
+   `<meta name="google-adsense-account">` en todas las páginas, en los dos idiomas.
+   No hay nada que pegar a mano ni dos sitios donde mantener el identificador.
+
+   El fragmento de código queda descartado: cargaría `adsbygoogle.js` en cada visita
+   antes de que nadie haya aceptado nada, que es justo lo que el banner existe para
+   impedir.
+
+   Comprobaciones después de desplegar:
 
    ```bash
    curl https://ceutaeclipse.es/ads.txt
@@ -221,6 +233,13 @@ correo de `/contacto` recibe (paso 1).
 
    Tiene que responder **200 en el ápex, sin redirección**. Si devuelve 404, falta la
    variable o falta el redespliegue.
+
+   ```bash
+   curl -s https://ceutaeclipse.es/ | grep google-adsense-account
+   # <meta name="google-adsense-account" content="ca-pub-1380381573272514"/>
+   ```
+
+   Si la etiqueta no aparece, es lo mismo: falta la variable o falta reconstruir.
 6. Enviar a revisión y esperar. Mientras la cuenta esté en revisión no hay que tocar
    nada: la web sigue sin cargar publicidad porque no hay IDs de bloque, y eso no
    perjudica a la revisión.

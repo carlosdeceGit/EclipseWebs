@@ -359,10 +359,13 @@ que falta es el buzón `contacto@`, la cuenta de AdSense y un CMP certificado po
   Google verifica la propiedad del dominio, semanas antes de encender nada— pero no aparece
   el banner de cookies ni se carga el script de Google. Eso espera a que exista además algún
   ID de bloque: no se pide consentimiento para una finalidad que todavía no existe.
-- **`/ads.txt` se genera por tenant** desde el ID de cliente. Además de ser obligatorio para
-  que Google autorice el inventario, es el método de verificación de propiedad que **no
-  carga nada en el navegador**, al contrario que el fragmento de código en el `<head>`: es
-  el único compatible con el consentimiento previo. Verificar por ahí.
+- **`/ads.txt` se genera por tenant** desde el ID de cliente, y es obligatorio para que
+  Google autorice el inventario.
+- **La verificación de propiedad ante Google** se hace por `ads.txt` o por la etiqueta
+  `<meta name="google-adsense-account">` que emite el layout, las dos derivadas del mismo
+  ID de cliente. Ninguna carga nada en el navegador, así que ambas son compatibles con el
+  consentimiento previo. La que no vale es el fragmento de código de AdSense en el `<head>`:
+  cargaría el script de Google en todas las páginas antes de que nadie haya aceptado nada.
 - Los enlaces salientes comerciales llevan `rel="sponsored nofollow"`. **No es opcional**:
   marcarlos mal hunde el dominio entero.
 - RLS de Supabase impide que un usuario se autoasigne nivel de pago o se autoapruebe.

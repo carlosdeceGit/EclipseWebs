@@ -27,9 +27,23 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const tenant = await currentTenant();
+  const adsenseAccount = adsenseClientId();
 
   return {
     metadataBase: new URL(tenantOrigin(tenant)),
+    /**
+     * Etiqueta de verificación de propiedad de AdSense.
+     *
+     * Google ofrece tres métodos para verificar un dominio y éste es, junto con el
+     * de `ads.txt`, uno de los dos compatibles con nuestro consentimiento previo:
+     * un `<meta>` es HTML inerte, no hace ninguna petición ni instala nada. El que
+     * no vale es el «fragmento de código de AdSense», que carga el script de Google
+     * en todas las páginas antes de que el visitante haya decidido nada.
+     *
+     * Sale del mismo identificador que `ads.txt`, así que no hay dos sitios donde
+     * mantenerlo, y no se emite mientras no haya cuenta configurada.
+     */
+    ...(adsenseAccount ? { other: { "google-adsense-account": adsenseAccount } } : {}),
     title: {
       default:
         locale === "en"
