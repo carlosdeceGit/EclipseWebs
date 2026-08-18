@@ -28,31 +28,107 @@ existe y es coherente. `src/lib/legal-entity.ts` ya publica `contacto@<dominio>`
 `/aviso-legal`, `/privacidad` y `/contacto`: hoy esa dirección aparece en la web y no
 recibe nada, lo que es peor que no tenerla.
 
-Hacen falta cuatro buzones o redirecciones:
+Hacen falta cinco direcciones, aunque solo una bloquea hoy:
 
 ```
-contacto@ceutaeclipse.es      ← el canónico, el que más importa
+contacto@ceutaeclipse.es      ← el canónico, el único que bloquea ahora
 contacto@ceutaeclipse.com
 contacto@eclipsecadiz.com
 contacto@eclipsetarifa.com
 contacto@eclipsegibraltar.com
 ```
 
-Basta con redirecciones a una cuenta personal; no hace falta un buzón real por
-dominio. Tres opciones, de más simple a más barata:
+No hace falta un buzón real por dominio: basta con que el correo acabe en una bandeja
+que se lea.
 
-- **GoDaddy**: el reenvío de correo ya no viene incluido en todos los planes y
-  empujan a Microsoft 365. Si el plan contratado lo incluye, es el camino más corto
-  porque el DNS ya está allí.
-- **ImprovMX** o **Forward Email**: reenvío gratuito añadiendo dos registros MX en
-  GoDaddy. Es la opción con menos fricción si no se quiere tocar nada más.
-- **Cloudflare Email Routing**: gratis, con buen panel y sin límite práctico, pero
-  obliga a mover los servidores de nombres del dominio a Cloudflare. Merece la pena
-  si se va a gestionar toda la red de dominios desde un sitio; no si solo se quiere
-  un buzón.
+### GoDaddy ya no es la vía gratuita
 
-Sea cual sea, **comprobar que llega un correo de verdad** antes de seguir. Un MX mal
-puesto no da error: simplemente el correo se pierde.
+Conviene descartarlo primero para no perder tiempo. GoDaddy **retiró Workspace Email**,
+que era lo que incluía reenvíos con el dominio. Hoy su producto de Email Forwarding
+solo funciona si quedan créditos heredados de aquella época; si no, empujan a Microsoft
+365 de pago tras una prueba. Merece la pena mirar en la cuenta si hay créditos antiguos
+—es medio minuto— pero no conviene construir el plan sobre eso.
+
+### La vía recomendada: el Google Workspace de upandalus.com
+
+Es gratis, cubre los cinco dominios y **no consume licencias**, que es la parte que
+todo el mundo asume mal. El truco está en usar **grupos** en vez de usuarios: un usuario
+de Workspace cuesta licencia, un grupo no, y para un buzón de contacto un grupo hace
+exactamente el mismo trabajo.
+
+1. **Añadir el dominio como secundario.** Consola de administración → *Cuenta →
+   Dominios → Gestionar dominios → Añadir un dominio*, y elegir **dominio secundario**,
+   no alias.
+
+   La diferencia importa: un *alias de dominio* replica automáticamente todas las
+   direcciones de `upandalus.com` en `ceutaeclipse.es`, así que cualquier persona que
+   entre algún día en ese Workspace tendría buzón en el dominio del eclipse sin
+   pedirlo. Un *dominio secundario* deja controlar exactamente qué direcciones existen.
+
+2. **Verificar la propiedad.** Google da un registro `TXT`; se añade en GoDaddy →
+   *DNS → Registros → Añadir* con nombre `@`.
+
+3. **Activar Gmail para ese dominio**, que es lo que pide el registro `MX`. En GoDaddy,
+   un único registro:
+
+   ```
+   MX   @   smtp.google.com   prioridad 1
+   ```
+
+   Ése es el valor actual de Google. Los cinco registros antiguos que empiezan por
+   `aspmx` siguen siendo válidos si ya están puestos en otro dominio; no hace falta
+   cambiarlos.
+
+4. **Crear el grupo.** *Directorio → Grupos → Crear grupo*, dirección
+   `contacto@ceutaeclipse.es`, y añadirse como único miembro.
+
+5. **Permitir el correo de fuera.** Es el paso que se olvida siempre y el que hace
+   inútil todo lo anterior: por defecto un grupo de Workspace **rechaza el correo
+   externo**. En la configuración del grupo, *Quién puede publicar* → **Cualquier
+   usuario de internet**, y comprobar que los mensajes externos no quedan retenidos
+   para moderación. Un buzón de contacto que rebota los correos de fuera es peor que
+   no tener buzón, y es exactamente lo que probaría un revisor.
+
+6. **Repetir con los otros cuatro dominios** cuando toque publicarlos. El límite de
+   dominios de Workspace está muy por encima de cinco.
+
+Dos avisos:
+
+- **Esto no toca la web.** Los registros `A` y `CNAME` que apuntan a Vercel y los `MX`
+  son cosas distintas y conviven sin interferir. Añadir el `MX` no afecta al sitio.
+- Las ediciones **Essentials** e **Individual** de Workspace no admiten varios
+  dominios. Con Business Starter en adelante, sí.
+
+### Poder responder desde esa dirección
+
+Recibir basta para la LSSI, pero responder desde `contacto@ceutaeclipse.es` da bastante
+mejor impresión que hacerlo desde una cuenta personal. En Gmail: *Ver todos los ajustes
+→ Cuentas e importación → Enviar como*. Para que esas respuestas no caigan en spam hay
+que publicar además el **SPF** y el **DKIM** del dominio, que Google genera desde la
+consola de administración.
+
+### Si el Workspace es Microsoft 365 y no Google
+
+La idea es la misma con otros nombres: añadir el dominio como *dominio aceptado* y
+crear un **buzón compartido**, que en Microsoft 365 tampoco consume licencia.
+
+### Si prefieres no tocar el Workspace
+
+- **ImprovMX** o **Forward Email**: reenvío gratuito con dos registros `MX` en GoDaddy.
+  Es lo más rápido de montar. A cambio, un canal con valor legal queda en manos de un
+  tercero gratuito.
+- **Cloudflare Email Routing**: gratis y con buen panel, pero obliga a mover los
+  servidores de nombres del dominio a Cloudflare. Compensa si algún día se gestiona
+  toda la red desde ahí; no por un solo buzón.
+
+### La comprobación que cierra el paso
+
+**Enviar un correo desde una dirección externa** —un Gmail personal, no una cuenta del
+propio Workspace— a `contacto@ceutaeclipse.es`, y confirmar que llega y que no cae en
+spam. Probar desde dentro de la organización no vale: el correo interno puede
+entregarse aunque el `MX` esté mal puesto y da un falso positivo.
+
+Un `MX` mal configurado no da error en ninguna parte: el correo simplemente se pierde.
 
 ---
 
