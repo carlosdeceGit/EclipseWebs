@@ -343,8 +343,9 @@ cuánto dura): es lo que copian los motores generativos.
 ## 6. Monetización: detalles de implementación
 
 **Pasos de activación, en orden y con lo que bloquea cada uno:
-[`docs/activar-adsense.md`](docs/activar-adsense.md).** Resumen: el código está listo; lo
-que falta es el buzón `contacto@`, la cuenta de AdSense y un CMP certificado por Google.
+[`docs/activar-adsense.md`](docs/activar-adsense.md).** Resumen: el código está listo y el
+buzón `contacto@ceutaeclipse.es` ya recibe; lo que falta es la cuenta de AdSense y un CMP
+certificado por Google.
 
 - Un hueco sin configurar **no se dibuja**: ni marcador, ni borde, ni altura reservada, ni
   el contenedor que lo envuelve. `AdSection` existe precisamente para que la `<Section>`
@@ -568,9 +569,13 @@ idiomas:
 Aparece en `/aviso-legal`, `/privacidad` y `/contacto`. Lo exige la LSSI (art. 10) y lo
 revisa AdSense al aprobar un dominio.
 
-**Pendiente**: dar de alta los buzones `contacto@ceutaeclipse.com`,
-`contacto@eclipsecadiz.es`, `contacto@eclipsetarifa.es` y `contacto@eclipsegibraltar.com`
-(o redirecciones) antes de publicar.
+`contacto@ceutaeclipse.es` **ya existe y recibe correo**, que es el que corresponde al
+único dominio publicado.
+
+**Pendiente**: dar de alta `contacto@eclipsecadiz.es`, `contacto@eclipsetarifa.es` y
+`contacto@eclipsegibraltar.com` (o redirecciones) antes de publicar cada uno de esos
+dominios. El correo se deriva del tenant, así que la dirección aparece publicada en
+cuanto el dominio entra en `TENANTS`: el buzón tiene que existir antes.
 
 ---
 
