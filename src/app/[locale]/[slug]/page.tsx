@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { AdSection, AdSlot } from "@/components/AdSlot";
 import { Blocks } from "@/components/Blocks";
-import { ARTICLES, ARTICLES_BY_SLUG } from "@/content/articles";
+import { ARTICLES, ARTICLES_BY_SLUG, articleServesCity } from "@/content/articles";
 import { breadcrumbGraph, buildMetadata, faqGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
@@ -29,6 +29,7 @@ export async function generateMetadata({
 
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
+  if (!articleServesCity(article, city.slug)) return {};
   const content = article.content[locale](city, tenant);
 
   return buildMetadata({
@@ -52,6 +53,10 @@ export default async function ArticlePage({
 
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
+  // Las guías exclusivas de una ciudad no existen en el resto de dominios: hablan de
+  // una frontera, un ferry o un borde de franja que allí no están. 404, no redirección.
+  if (!articleServesCity(article, city.slug)) notFound();
+
   const t = getDictionary(locale);
   const content = article.content[locale](city, tenant);
   const faqItems = article.faq?.[locale];

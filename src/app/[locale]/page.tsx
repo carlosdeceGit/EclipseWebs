@@ -10,6 +10,7 @@ import { buildMetadata, cityGraph, datasetGraph, faqGraph, jsonLd } from "@/lib/
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
 import { HOME_FAQ } from "@/content/faq";
+import { editorialArticlesFor } from "@/content/articles";
 import { getDictionary } from "@/i18n/dictionary";
 import { isLocale, localePath } from "@/i18n/config";
 
@@ -58,7 +59,19 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const ranking = citiesByTotality().slice(0, 10);
   const faq = HOME_FAQ[locale];
 
-  const planCards: [string, string, string][] =
+  /*
+    Las guías exclusivas de esta ciudad van las primeras: son las que este dominio
+    tiene y ningún otro de la red, así que son también el enlace interno que más
+    conviene reforzar. Sin ellas aquí serían páginas huérfanas.
+  */
+  const localCards: [string, string, string][] = editorialArticlesFor(city.slug)
+    .filter((a) => a.cities)
+    .map((a) => {
+      const content = a.content[locale](city, tenant);
+      return [`/${a.slug}`, content.shortTitle ?? content.title, content.description];
+    });
+
+  const genericCards: [string, string, string][] =
     locale === "es"
       ? [
           ["/localizador", "Localizador", "Tus horas exactas en tus coordenadas, no las del centro del pueblo."],
@@ -88,6 +101,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           ["/directorio", "Business directory", "Hotels, restaurants and services in the city."],
           ["/fuentes", "Sources and method", "How we compute the timings and what we validate against."],
         ];
+
+  const planCards: [string, string, string][] = [...localCards, ...genericCards];
 
   return (
     <>

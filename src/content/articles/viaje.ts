@@ -1,11 +1,14 @@
 import { formatDuration } from "@/lib/eclipse/cities";
-import type { Article } from "./types";
+import { localAccessItems, localBottleneckBlock, localStayItems } from "../local";
+import type { Article, Block } from "./types";
 
 /** Alojamiento: la decisión que hay que tomar antes que ninguna otra. */
 export const alojamiento: Article = {
   slug: "alojamiento",
   content: {
-    es: (city) => ({
+    es: (city) => {
+      const local = localStayItems(city.slug, "es");
+      return {
       title: `Alojamiento para el eclipse en ${city.name}: qué hacer y cuándo reservar`,
       description: `Cómo encontrar sitio en ${city.name} para el eclipse del 2 de agosto de 2027, qué precios esperar y qué alternativas hay si se agota todo dentro de la franja.`,
       body: [
@@ -25,6 +28,12 @@ export const alojamiento: Article = {
             ? `Dormir dentro de la franja evita el problema real del día 2, que no es encontrar sitio para ver el eclipse sino llegar. La totalidad en ${city.name} empieza a las ${city.localTimes.totalityStart}, así que quien duerma fuera tendrá que conducir esa misma mañana hacia una zona con carreteras saturadas. Si no encuentras nada en ${city.name}, un alojamiento más lejos pero dentro de la franja sigue siendo mejor que uno más cerca pero fuera.`
             : `Desde ${city.name} el eclipse se ve parcial, así que si el objetivo es la totalidad conviene buscar alojamiento directamente dentro de la franja y usar ${city.name} solo como base de apoyo.`,
         },
+        ...(local
+          ? ([
+              { type: "h2", text: `Lo que hay que saber de ${city.name} en concreto` },
+              { type: "ul", items: local },
+            ] as Block[])
+          : []),
         { type: "h2", text: "Alternativas cuando se agotan los hoteles" },
         {
           type: "ul",
@@ -52,9 +61,11 @@ export const alojamiento: Article = {
           text: `Alrededor de un evento con demanda desbordada aparecen anuncios falsos de alojamiento. Las señales son siempre las mismas: precio muy por debajo del mercado, prisa por cerrar, y pago por adelantado fuera de cualquier plataforma. Si reservas a un particular, verifica que existe la dirección y desconfía de quien se niega a una videollamada.`,
         },
       ],
-    }),
+      };
+    },
     en: (city) => {
       const name = city.nameEn ?? city.name;
+      const local = localStayItems(city.slug, "en");
       return {
         title: `Where to stay for the eclipse in ${name}`,
         description: `How to find a place in ${name} for the 2 August 2027 eclipse, what prices to expect, and what to do if everything inside the path is booked out.`,
@@ -75,6 +86,12 @@ export const alojamiento: Article = {
               ? `Sleeping inside the path avoids the real problem on the day, which is not finding a spot to watch from but getting there at all. Totality in ${name} begins at ${city.localTimes.totalityStart}, so anyone staying outside has to drive that same morning into an area with saturated roads. If you cannot find anything in ${name}, somewhere further away but inside the path still beats somewhere closer but outside it.`
               : `From ${name} the eclipse is partial, so if totality is the goal, look for accommodation inside the path itself and treat ${name} only as a base.`,
           },
+          ...(local
+            ? ([
+                { type: "h2", text: `What is specific to ${name}` },
+                { type: "ul", items: local },
+              ] as Block[])
+            : []),
           { type: "h2", text: "Alternatives when the hotels are gone" },
           {
             type: "ul",
@@ -111,7 +128,10 @@ export const alojamiento: Article = {
 export const comoLlegar: Article = {
   slug: "como-llegar",
   content: {
-    es: (city) => ({
+    es: (city) => {
+      const local = localAccessItems(city.slug, "es");
+      const bottleneck = localBottleneckBlock(city.slug, "es");
+      return {
       title: `Cómo llegar a ${city.name} para el eclipse del 2 de agosto de 2027`,
       description: `Ferris, aeropuertos, trenes y carreteras para llegar a ${city.name} el día del eclipse, y cómo evitar quedarte atrapado en la carretera durante la totalidad.`,
       body: [
@@ -130,7 +150,8 @@ export const comoLlegar: Article = {
         {
           type: "ul",
           items:
-            city.slug === "ceuta" || city.slug === "melilla"
+            local ??
+            (city.slug === "melilla"
               ? [
                   "Por mar: los ferris desde la Península son el acceso principal y se llenarán. Reserva plaza con mucha antelación, y con vehículo aún más; plantéate cruzar como pasajero y moverte a pie o en transporte público.",
                   "Cuenta con colas y controles fronterizos más lentos de lo normal ese fin de semana.",
@@ -142,8 +163,9 @@ export const comoLlegar: Article = {
                   "En avión: Málaga es el aeropuerto grande de referencia, con Jerez y Gibraltar como alternativas más pequeñas. Los vuelos de esas fechas suben de precio pronto.",
                   "En tren: la red llega bien a Málaga, Cádiz y Jerez, pero no cubre buena parte de los municipios de la franja, así que casi siempre hay que combinar con autobús o coche.",
                   "En autobús: la opción más barata y la más expuesta al atasco. Sirve para llegar días antes, no esa mañana.",
-                ],
+                ]),
         },
+        ...(bottleneck ? [bottleneck] : []),
         { type: "h2", text: "Moverse el mismo día 2" },
         {
           type: "ul",
@@ -162,9 +184,12 @@ export const comoLlegar: Article = {
           text: "Todo el mundo se va a la vez, en cuanto termina la totalidad. Si puedes, quédate a comer donde estés y sal por la tarde: ganarás tiempo y de paso el negocio local lo agradece.",
         },
       ],
-    }),
+      };
+    },
     en: (city) => {
       const name = city.nameEn ?? city.name;
+      const local = localAccessItems(city.slug, "en");
+      const bottleneck = localBottleneckBlock(city.slug, "en");
       return {
         title: `Getting to ${name} for the 2 August 2027 eclipse`,
         description: `Ferries, airports, trains and roads for reaching ${name} on eclipse day, and how to avoid being stuck in traffic during totality.`,
@@ -184,7 +209,8 @@ export const comoLlegar: Article = {
           {
             type: "ul",
             items:
-              city.slug === "ceuta" || city.slug === "melilla"
+              local ??
+              (city.slug === "melilla"
                 ? [
                     "By sea: ferries from mainland Spain are the main access and they will fill up. Book well ahead, and much further ahead with a vehicle; consider crossing as a foot passenger.",
                     "Expect slower border controls than usual that weekend.",
@@ -196,8 +222,9 @@ export const comoLlegar: Article = {
                     "By air: Malaga is the main airport, with Jerez and Gibraltar as smaller alternatives and Seville as a wider entry point. Fares for those dates rise early.",
                     "By train: the network serves Malaga, Cadiz and Jerez well, but not most of the smaller towns in the path, so you will usually combine it with a bus or car.",
                     "By bus: cheapest and most exposed to traffic. Useful for arriving days earlier, not that morning.",
-                  ],
+                  ]),
           },
+          ...(bottleneck ? [bottleneck] : []),
           { type: "h2", text: "Moving around on the day" },
           {
             type: "ul",

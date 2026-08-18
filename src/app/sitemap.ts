@@ -1,9 +1,9 @@
 import type { MetadataRoute } from "next";
-import { ARTICLES } from "@/content/articles";
+import { articlesFor } from "@/content/articles";
 import { postsForCity } from "@/content/blog";
 import { CITIES } from "@/lib/eclipse/cities";
 import { currentTenant } from "@/lib/tenant-context";
-import { tenantOrigin } from "@/lib/tenants";
+import { tenantCity, tenantOrigin } from "@/lib/tenants";
 import { LOCALES, localePath } from "@/i18n/config";
 
 /**
@@ -16,6 +16,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const tenant = await currentTenant();
   const origin = tenantOrigin(tenant);
   const now = new Date();
+  // Cada dominio declara solo las guías que realmente sirve: las exclusivas de otra
+  // ciudad devuelven 404 aquí y anunciarlas sería declarar URLs rotas.
+  const articles = articlesFor(tenantCity(tenant).slug);
 
   // Solo los posts de la ciudad de este dominio. Anunciar en el sitemap de un
   // dominio URLs que ese dominio devuelve como 404 es la forma más rápida de
@@ -43,7 +46,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           MetadataRoute.Sitemap[number]["changeFrequency"],
         ],
     ),
-    ...ARTICLES.map(
+    ...articles.map(
       (a) =>
         [`/${a.slug}`, a.legal ? 0.2 : 0.8, a.legal ? "yearly" : "weekly"] as [
           string,

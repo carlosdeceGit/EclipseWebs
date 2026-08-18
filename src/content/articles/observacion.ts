@@ -1,25 +1,40 @@
 import { formatDuration } from "@/lib/eclipse/cities";
-import type { Article } from "./types";
+import { localAngle, localSpotBlocks, localWeatherBlocks } from "../local";
+import type { Article, Block } from "./types";
 
 /** Dónde verlo: cómo se elige un punto de observación. */
 export const dondeVerlo: Article = {
   slug: "donde-verlo",
   content: {
-    es: (city) => ({
-      title: `Dónde ver el eclipse en ${city.name}: cómo elegir el punto`,
-      description: `Qué condiciones debe cumplir un buen punto de observación para el eclipse total del 2 de agosto de 2027 en ${city.name}, y cómo calcular el tuyo exacto.`,
+    es: (city) => {
+      const angle = localAngle(city.slug, "es");
+      const spots = localSpotBlocks(city.slug, "es");
+      return {
+      title: `Dónde ver el eclipse en ${city.name}: miradores y cómo elegir el punto`,
+      description: `Puntos de observación concretos en ${city.name} para el eclipse total del 2 de agosto de 2027, con la pega de cada uno, y cómo calcular las circunstancias del tuyo.`,
       body: [
         {
           type: "p",
           text: city.eclipse.isTotal
-            ? `${city.name} está dentro de la franja de totalidad, así que el eclipse se ve desde cualquier punto del municipio con el cielo despejado. El Sol estará a unos ${city.eclipse.sunAltitudeDeg.toFixed(0)}° sobre el horizonte, hacia el ${city.eclipse.sunAzimuthDeg.toFixed(0)}° de azimut —este-sureste—, es decir, bastante alto y por encima de casi cualquier obstáculo. Lo que distingue un sitio bueno de uno malo no es la vista del Sol: es el entorno.`
+            ? `${city.name} está dentro de la franja de totalidad, así que el eclipse se ve desde cualquier punto del municipio con el cielo despejado. El Sol estará a unos ${city.eclipse.sunAltitudeDeg.toFixed(0)}° sobre el horizonte, hacia el ${city.eclipse.sunAzimuthDeg.toFixed(0)}° de azimut —prácticamente al este—, es decir, bastante alto y por encima de casi cualquier obstáculo. Lo que distingue un sitio bueno de uno malo no es la vista del Sol: es el entorno.`
             : `Desde ${city.name} el eclipse se ve parcial. Para ver la totalidad hay que desplazarse a la franja; esta guía sirve igualmente para elegir el punto una vez allí.`,
         },
+        ...(angle ? [{ type: "p", text: angle } as Block] : []),
         {
           type: "callout",
           title: "Calcula tu punto exacto",
           text: "La duración cambia kilómetro a kilómetro. En el localizador puedes introducir las coordenadas exactas donde vas a estar y obtener tus horas y tu duración, además de saber si te compensa moverte.",
         },
+        ...(spots.length
+          ? ([
+              { type: "h2", text: `Dónde ver el eclipse en ${city.name}, sitio por sitio` },
+              {
+                type: "p",
+                text: `Cada punto va con su pega, porque el 2 de agosto la diferencia entre un buen sitio y una trampa no es la vista: es el aparcamiento, el aforo y por dónde se sale.`,
+              },
+              ...spots,
+            ] as Block[])
+          : []),
         { type: "h2", text: "Qué hace bueno a un punto de observación" },
         {
           type: "ul",
@@ -53,28 +68,42 @@ export const dondeVerlo: Article = {
         },
         {
           type: "callout",
-          title: "Puntos concretos, con reservas",
-          text: `Iremos publicando los puntos de observación habilitados oficialmente en ${city.name} según los confirmen ayuntamiento y agrupaciones astronómicas. Preferimos no señalar de antemano rincones que no soportarían la afluencia.`,
+          title: "Puntos oficiales, cuando los haya",
+          text: `Iremos publicando los puntos de observación habilitados oficialmente en ${city.name} según los confirmen ayuntamiento y agrupaciones astronómicas. Hasta entonces, lo de arriba es criterio, no una lista cerrada: preferimos no señalar rincones pequeños que no soportarían la afluencia.`,
         },
       ],
-    }),
+      };
+    },
     en: (city) => {
       const name = city.nameEn ?? city.name;
+      const angle = localAngle(city.slug, "en");
+      const spots = localSpotBlocks(city.slug, "en");
       return {
-        title: `Where to watch the eclipse in ${name}`,
-        description: `What makes a good viewing spot for the total eclipse of 2 August 2027 in ${name}, and how to work out the exact circumstances for yours.`,
+        title: `Where to watch the eclipse in ${name}: viewpoints and how to choose`,
+        description: `Specific viewing spots in ${name} for the total eclipse of 2 August 2027, each with its catch, and how to work out the exact circumstances for yours.`,
         body: [
           {
             type: "p",
             text: city.eclipse.isTotal
-              ? `${name} is inside the path of totality, so the eclipse is visible from anywhere in the municipality with a clear sky. The Sun will be about ${city.eclipse.sunAltitudeDeg.toFixed(0)}° above the horizon at an azimuth of roughly ${city.eclipse.sunAzimuthDeg.toFixed(0)}° — east-southeast — which is high enough to clear almost any obstacle. What separates a good spot from a bad one is not the view of the Sun: it is the surroundings.`
+              ? `${name} is inside the path of totality, so the eclipse is visible from anywhere in the municipality with a clear sky. The Sun will be about ${city.eclipse.sunAltitudeDeg.toFixed(0)}° above the horizon at an azimuth of roughly ${city.eclipse.sunAzimuthDeg.toFixed(0)}° — very nearly due east — high enough to clear almost any obstacle. What separates a good spot from a bad one is not the view of the Sun: it is the surroundings.`
               : `From ${name} the eclipse is partial. Seeing totality means travelling into the path; this guide applies equally to choosing a spot once you are there.`,
           },
+          ...(angle ? [{ type: "p", text: angle } as Block] : []),
           {
             type: "callout",
             title: "Work out your exact spot",
             text: "Totality changes kilometre by kilometre. The locator lets you enter the exact coordinates where you will be and returns your timings and duration, plus whether moving is worth it.",
           },
+          ...(spots.length
+            ? ([
+                { type: "h2", text: `Where to watch in ${name}, spot by spot` },
+                {
+                  type: "p",
+                  text: `Each one comes with its catch, because on 2 August what separates a good spot from a trap is not the view: it is the parking, the capacity limit and how you get out.`,
+                },
+                ...spots,
+              ] as Block[])
+            : []),
           { type: "h2", text: "What makes a good viewing spot" },
           {
             type: "ul",
@@ -116,19 +145,25 @@ export const dondeVerlo: Article = {
 export const clima: Article = {
   slug: "clima",
   content: {
-    es: (city) => ({
+    es: (city) => {
+      const local = localWeatherBlocks(city.slug, "es");
+      return {
       title: `¿Estará despejado en ${city.name} el día del eclipse?`,
-      description: `Qué dice la climatología de principios de agosto en ${city.name} y qué margen hay para moverse si amanece nublado el 2 de agosto de 2027.`,
+      description: `Qué dice la climatología de principios de agosto en ${city.name}, qué fenómeno local puede estropearlo y qué margen hay para moverse el 2 de agosto de 2027.`,
       body: [
         {
           type: "p",
           text: `La buena noticia es que el eclipse cae a principios de agosto en el sur de España, que es de las combinaciones de fecha y lugar más favorables del mundo: es la época del año con menos nubosidad y menos lluvia de toda la región, y el Sol estará a unos ${city.eclipse.sunAltitudeDeg.toFixed(0)}° sobre el horizonte, lo que reduce el efecto de la bruma cercana al horizonte.`,
         },
-        { type: "h2", text: "El matiz local: el Estrecho tiene su propio tiempo" },
-        {
-          type: "p",
-          text: `En la zona del Estrecho conviven dos regímenes de viento con efectos opuestos. El levante empuja aire húmedo del Mediterráneo y puede formar una capa de nubes bajas que se pega a la costa y a las laderas, sobre todo por la mañana, que es justo cuando ocurre el eclipse. El poniente, más fresco y atlántico, suele dejar cielos más limpios. Es el factor que más puede estropear la observación en la zona, más que una tormenta.`,
-        },
+        ...(local.length
+          ? local
+          : ([
+              { type: "h2", text: "El matiz local: el Estrecho tiene su propio tiempo" },
+              {
+                type: "p",
+                text: `En la zona del Estrecho conviven dos regímenes de viento con efectos opuestos. El levante empuja aire húmedo del Mediterráneo y puede formar una capa de nubes bajas que se pega a la costa y a las laderas, sobre todo por la mañana, que es justo cuando ocurre el eclipse. El poniente, más fresco y atlántico, suele dejar cielos más limpios. Es el factor que más puede estropear la observación en la zona, más que una tormenta.`,
+              },
+            ] as Block[])),
         { type: "h2", text: "Qué hacer con eso" },
         {
           type: "ul",
@@ -151,22 +186,28 @@ export const clima: Article = {
           text: `Incluso con el cielo cubierto, la totalidad se nota: la luz cae en picado hasta un crepúsculo profundo, la temperatura baja varios grados en minutos, el viento cambia y los animales se comportan como al anochecer. No es lo mismo que ver la corona, pero no es nada desdeñable.`,
         },
       ],
-    }),
+      };
+    },
     en: (city) => {
       const name = city.nameEn ?? city.name;
+      const local = localWeatherBlocks(city.slug, "en");
       return {
         title: `Will the sky be clear in ${name} on eclipse day?`,
-        description: `What August climatology says about ${name}, and how much room you have to move if 2 August 2027 dawns cloudy.`,
+        description: `What August climatology says about ${name}, which local phenomenon can ruin it, and how much room you have to move on 2 August 2027.`,
         body: [
           {
             type: "p",
             text: `The good news is that this eclipse falls in early August in southern Spain, one of the most favourable combinations of date and place anywhere in the world. It is the time of year with the least cloud and the least rain in the region, and the Sun will be around ${city.eclipse.sunAltitudeDeg.toFixed(0)}° above the horizon, which reduces the effect of haze low down.`,
           },
-          { type: "h2", text: "The local catch: the Strait makes its own weather" },
-          {
-            type: "p",
-            text: `Two opposing wind regimes meet around the Strait of Gibraltar. The levante pushes humid Mediterranean air west and can form a layer of low cloud that clings to the coast and hillsides, particularly in the morning — exactly when the eclipse happens. The poniente, cooler and Atlantic, usually leaves cleaner skies. This, rather than any storm, is the thing most likely to spoil the view here.`,
-          },
+          ...(local.length
+            ? local
+            : ([
+                { type: "h2", text: "The local catch: the Strait makes its own weather" },
+                {
+                  type: "p",
+                  text: `Two opposing wind regimes meet around the Strait of Gibraltar. The levante pushes humid Mediterranean air west and can form a layer of low cloud that clings to the coast and hillsides, particularly in the morning — exactly when the eclipse happens. The poniente, cooler and Atlantic, usually leaves cleaner skies. This, rather than any storm, is the thing most likely to spoil the view here.`,
+                },
+              ] as Block[])),
           { type: "h2", text: "What to do about it" },
           {
             type: "ul",

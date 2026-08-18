@@ -40,9 +40,13 @@ franjas distintas.
 | Dominio | Ciudad | Totalidad | Estado |
 | --- | --- | --- | --- |
 | **`ceutaeclipse.es`** (canónico) + `ceutaeclipse.com` | Ceuta | 4 min 48 s — **el máximo de España** | En producción |
-| `eclipsecadiz.com` | Cádiz | 2 min 55 s | Configurado, sin activar |
-| `eclipsetarifa.com` | Tarifa | 4 min 39 s | Configurado, sin activar |
-| `eclipsegibraltar.com` | Gibraltar | 4 min 27 s | Configurado, sin activar |
+| **`eclipsecadiz.es`** (canónico) | Cádiz | 2 min 55 s | Con contenido propio; falta DNS y alta en Vercel |
+| **`eclipsetarifa.es`** (canónico) | Tarifa | 4 min 39 s | Con contenido propio; falta DNS y alta en Vercel |
+| **`eclipsegibraltar.com`** (canónico) | Gibraltar | 4 min 27 s | Con contenido propio; falta DNS y alta en Vercel |
+
+Los `.com` de Cádiz y Tarifa y el `.es` de Gibraltar están declarados como **alias** aunque
+no estén en propiedad. Un alias que no resuelve no cuesta nada y, si algún día se compran,
+sirven el mismo contenido y canonicalizan al principal sin tocar código.
 
 Configurados en `src/lib/tenants.ts`. **Añadir un dominio es añadir una entrada ahí y
 apuntar el DNS.** Nada más.
@@ -189,7 +193,9 @@ src/
   content/
     faq.ts                 FAQ bilingües
     articles/              guías largas bilingües, una por archivo
+      locales.ts           guías exclusivas de un dominio (`cities: [...]`)
     blog/                  posts del blog, agrupados por ciudad
+    local/                 conocimiento local por ciudad: miradores, accesos, clima
   components/
     Blocks.tsx             renderizador de bloques, compartido por guías y blog
     art/                   ilustraciones SVG propias (ver §7)
@@ -217,8 +223,12 @@ se deriva de ahí.
 Probar un dominio en local:
 
 ```bash
-curl -H "Host: eclipsetarifa.com" localhost:3000/
+curl -H "Host: eclipsetarifa.es" localhost:3000/
 curl -H "Host: ceutaeclipse.com" localhost:3000/en/horarios
+
+# Una guía exclusiva solo responde en su dominio: 200 aquí, 404 en los demás.
+curl -o /dev/null -w "%{http_code}\n" -H "Host: eclipsetarifa.es" localhost:3000/levante
+curl -o /dev/null -w "%{http_code}\n" -H "Host: eclipsecadiz.es"  localhost:3000/levante
 ```
 
 `localhost` cae al tenant «hub», así que la web es navegable sin tocar `/etc/hosts`.
@@ -240,6 +250,71 @@ filtros antes de viajar.
 Los textos se generan a partir de la ciudad del dominio. Publicar el mismo contenido en
 varias webs propias es la forma más rápida de que Google se quede con una e ignore el
 resto. **Cualquier contenido nuevo debe seguir esta regla.**
+
+Sustituir el topónimo no basta: cuatro guías idénticas con la ciudad cambiada siguen siendo
+contenido duplicado. Lo que de verdad separa un dominio de otro es la **capa de
+conocimiento local**.
+
+#### `src/content/local/`: lo que el cálculo no da
+
+Un perfil local por ciudad con lo único que no se puede calcular ni deducir:
+
+| Campo | Qué guarda | Dónde sale |
+| --- | --- | --- |
+| `angle` | Qué hace distinto ver el eclipse aquí, en clave logística | `/donde-verlo` |
+| `whyHere` | Qué significa el eclipse para esta ciudad | `/guia` |
+| `spots[]` | Miradores con nombre propio, **cada uno con su pega** | `/donde-verlo`, como `h3` |
+| `access[]` | Cómo se llega de verdad a esta ciudad | `/como-llegar` |
+| `bottleneck` | El cuello de botella concreto del día 2 | `/como-llegar` |
+| `stay[]` | Dónde dormir cuando el consejo genérico no sirve | `/alojamiento` |
+| `weather` | El riesgo meteorológico local, que aquí nunca es el mismo | `/clima` |
+
+Sin perfil, el tenant sirve el texto genérico y todo sigue funcionando. Con perfil, las
+cinco guías se reescriben solas alrededor de su ciudad.
+
+El `caveat` de cada mirador **es obligatorio**. Un sitio recomendado sin su pega es una
+recomendación falsa: el 2 de agosto la diferencia entre un buen punto y una trampa no es la
+vista, es el aparcamiento, el aforo y por dónde se sale.
+
+#### Guías exclusivas de un dominio
+
+`src/content/articles/locales.ts`. Un artículo con `cities: [...]` **solo existe en esos
+dominios**: fuera devuelve 404 y no entra en el sitemap ni en `llms.txt`.
+
+| Dominio | URL exclusiva | De qué va |
+| --- | --- | --- |
+| `ceutaeclipse.es` | `/ferry` | El único acceso es por mar, y el levante cancela salidas |
+| `eclipsecadiz.es` | `/borde-de-la-franja` | Cádiz está al norte del centro: cuánto se gana bajando |
+| `eclipsetarifa.es` | `/levante` | La barra de nubes del Estrecho y el plan B hacia el oeste |
+| `eclipsegibraltar.com` | `/frontera` | La cola de frontera y la nube que fabrica el Peñón |
+
+Las tablas de duraciones de esos artículos se resuelven desde `cities.ts` con el cálculo
+besseliano: no hay ni una cifra escrita a mano.
+
+Al añadir una guía exclusiva hay que enlazarla desde algún sitio. La home lo hace sola
+(`localCards` va delante de las genéricas en `src/app/[locale]/page.tsx`); si no, queda
+huérfana.
+
+#### Estado real de la duplicación
+
+Medido sobre los cuatro dominios en producción, como fracción de frases idénticas:
+
+| Página | Compartido | Por qué |
+| --- | --- | --- |
+| `/donde-verlo` | 29–32 % | Miradores propios |
+| `/como-llegar` | 30–33 % | Accesos y cuello de botella propios |
+| `/clima` | 33–39 % | Fenómeno local distinto en cada sitio |
+| `/alojamiento` | 38–41 % | Alternativas propias |
+| `/fotografia` | 61 % | Técnica universal |
+| `/guia` | 66–69 % | Qué es un eclipse: universal, con cierre local |
+| `/fuentes` | 68 % | Método de cálculo: es el mismo, y debe serlo |
+| `/gafas-de-eclipse` | 75 % | Normativa europea: es la misma |
+| `/seguridad` | 76 % | **No se toca.** Ver regla 7 |
+
+Las cuatro últimas son conocimiento universal y **no deben diferenciarse por SEO**: variar
+la guía de seguridad para posicionar es exactamente lo que prohíbe la regla 7. Si Google
+llega a filtrarlas, la solución correcta es un `canonical` cruzado hacia un dominio de
+referencia, no reescribirlas.
 
 ---
 
@@ -487,7 +562,7 @@ Aparece en `/aviso-legal`, `/privacidad` y `/contacto`. Lo exige la LSSI (art. 1
 revisa AdSense al aprobar un dominio.
 
 **Pendiente**: dar de alta los buzones `contacto@ceutaeclipse.com`,
-`contacto@eclipsecadiz.com`, `contacto@eclipsetarifa.com` y `contacto@eclipsegibraltar.com`
+`contacto@eclipsecadiz.es`, `contacto@eclipsetarifa.es` y `contacto@eclipsegibraltar.com`
 (o redirecciones) antes de publicar.
 
 ---
@@ -531,13 +606,19 @@ Cosas que conviene no romper:
 
 ## 13. Pendiente
 
-- Dar de alta los buzones de contacto (§10). **Bloquea publicar y bloquea AdSense**: la LSSI
-  exige un medio de contacto que funcione y el revisor lo comprueba.
+- Dar de alta los buzones de contacto del resto de dominios (§10). El de
+  `ceutaeclipse.es` ya funciona; los demás bloquean publicar esos dominios, porque la
+  LSSI exige un medio de contacto que funcione y el revisor de AdSense lo comprueba.
 - **CMP certificado por Google** antes de encender los bloques de anuncios. El banner actual
   cumple con la AEPD pero no es un CMP de IAB TCF v2.2, que es lo que exige la política de
   consentimiento de la UE de Google. Detalle y opciones en `docs/activar-adsense.md` §5.
 - Marcar `ceutaeclipse.es` como dominio principal en Vercel, para que redirija `www` y no al
   contrario.
+- **Publicar Cádiz, Tarifa y Gibraltar**: el contenido ya está, falta apuntar el DNS al
+  proyecto de Vercel y dar de alta los tres dominios con su `www` en *Settings → Domains*.
+  Marcar el ápex como principal, igual que en Ceuta.
+- Escribir los perfiles locales de Algeciras, La Línea y Melilla antes de comprar sus
+  dominios: un dominio sin `src/content/local/` sirve la guía genérica y no compite.
 - Mapa interactivo de la franja de totalidad.
 - Posts de blog para Cádiz, Tarifa y Gibraltar cuando se activen esos dominios: hoy su
   `/blog` sale vacío y con `noindex`, que es el comportamiento correcto mientras no haya
