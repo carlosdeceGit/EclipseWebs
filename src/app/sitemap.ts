@@ -29,6 +29,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ["/", 1, "daily"],
     ["/horarios", 0.9, "weekly"],
     ["/localizador", 0.9, "weekly"],
+    ["/visor", 0.9, "weekly"],
     ["/ciudades", 0.8, "weekly"],
     ["/directorio", 0.8, "daily"],
     ["/clasificados", 0.8, "daily"],

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection } from "@/components/AdSlot";
 import { ListingCard } from "@/components/ListingCard";
-import { Badge, Callout, Card, Section } from "@/components/ui";
+import { Badge, Callout, Card, PageHeader, Section } from "@/components/ui";
 import { DIRECTORY_CATEGORIES, getListings } from "@/lib/db/listings";
 import { buildMetadata } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -59,14 +59,15 @@ export default async function DirectoryPage({
 
   return (
     <>
-      <Section
+      <PageHeader
         title={locale === "es" ? `Directorio de negocios de ${name}` : `Business directory for ${name}`}
         lead={
           locale === "es"
             ? "Negocios locales preparados para el eclipse del 2 de agosto de 2027. El alta básica es gratuita y la revisamos a mano antes de publicarla."
             : "Local businesses ready for the 2 August 2027 eclipse. Basic listings are free and reviewed by hand before publication."
         }
-      >
+      />
+      <Section>
         <div className="mb-6 flex flex-wrap gap-2">
           <Link
             href={localePath(locale, "/directorio")}
@@ -116,7 +117,7 @@ export default async function DirectoryPage({
             <Link
               href={localePath(locale, "/anunciate")}
               className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-semibold"
-              style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
             >
               {locale === "es" ? "Dar de alta mi negocio gratis" : "List my business for free"}
             </Link>
@@ -152,7 +153,7 @@ export default async function DirectoryPage({
             <Link
               href={localePath(locale, "/anunciate")}
               className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-semibold"
-              style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
             >
               {locale === "es" ? "Ver opciones" : "See options"}
             </Link>

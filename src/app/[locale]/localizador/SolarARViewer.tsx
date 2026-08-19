@@ -582,7 +582,7 @@ export function SolarARViewer({
         type="button"
         onClick={() => setStage("calibrating")}
         className="mt-4 w-full rounded-xl px-5 py-3 font-semibold sm:w-auto"
-        style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+        style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
       >
         {t.cardOpen}
       </button>
@@ -620,7 +620,7 @@ export function SolarARViewer({
             <li key={step} className="flex gap-3 text-sm">
               <span
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
               >
                 {index + 1}
               </span>
@@ -642,7 +642,7 @@ export function SolarARViewer({
             type="button"
             onClick={() => void startViewer()}
             className="w-full rounded-xl px-5 py-4 text-base font-bold"
-            style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
           >
             {t.calibrateGrant}
           </button>
@@ -711,7 +711,7 @@ export function SolarARViewer({
                   type="button"
                   onClick={() => void openCamera()}
                   className="rounded-xl px-5 py-3 font-semibold"
-                  style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+                  style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
                 >
                   {t.retry}
                 </button>
@@ -759,7 +759,7 @@ export function SolarARViewer({
             type="button"
             onClick={closeViewer}
             className="shrink-0 rounded-full px-5 py-3 text-sm font-bold"
-            style={{ background: "hsl(0 0% 100%)", color: "hsl(224 44% 8%)", minHeight: "48px", minWidth: "48px" }}
+            style={{ background: "hsl(0 0% 100%)", color: "hsl(var(--on-accent))", minHeight: "48px", minWidth: "48px" }}
           >
             ✕ <span className="sr-only">{t.close}</span>
             <span aria-hidden="true" className="ml-1 hidden sm:inline">

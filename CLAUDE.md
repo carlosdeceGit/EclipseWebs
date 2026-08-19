@@ -198,6 +198,7 @@ src/
   i18n/
     config.ts              locales, prefijos, helpers de ruta
     dictionary.ts          cadenas de interfaz es/en
+    navigation.ts          taxonomía de navegación: los cuatro grupos
   lib/
     tenants.ts             dominio → ciudad, marca y color
     tenant-context.ts      lectura del tenant/idioma en la petición
@@ -220,12 +221,18 @@ src/
     blog/                  posts del blog, agrupados por ciudad
     local/                 conocimiento local por ciudad: miradores, accesos, clima
   components/
+    ui.tsx                 primitivas: PageHeader, Section, Datum, Card, Callout…
+    SiteChrome.tsx         header isla, menú a pantalla completa, barra inferior, pie
     Blocks.tsx             renderizador de bloques, compartido por guías y blog
+    EclipseTimeline.tsx    los cinco contactos dibujados a escala
+    HomeLocator.tsx        el localizador embebido en la portada
     art/                   ilustraciones SVG propias (ver §7)
   app/
     [locale]/              todas las páginas
     [locale]/blog/         índice del blog y página de cada post
     [locale]/localizador/  localizador y visor AR de cámara (cliente)
+    [locale]/visor/        el visor AR con URL propia
+    calendar.ics           el eclipse como cita de calendario, por tenant
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
     og/                    imagen social generada al vuelo
@@ -340,6 +347,63 @@ Las cuatro últimas son conocimiento universal y **no deben diferenciarse por SE
 la guía de seguridad para posicionar es exactamente lo que prohíbe la regla 7. Si Google
 llega a filtrarlas, la solución correcta es un `canonical` cruzado hacia un dominio de
 referencia, no reescribirlas.
+
+### Diseño e interfaz
+
+El sistema vive entero en `src/app/globals.css`: color, tipografía fluida con `clamp()`,
+espaciado, curvas y duraciones de movimiento. Los componentes consumen variables y no
+inventan valores; ninguno escribe un color literal, o los cuatro dominios dejarían de
+distinguirse.
+
+Decisiones que conviene no revertir:
+
+- **El dato es el protagonista.** `Datum` en `ui.tsx` y la clase `.datum` existen para
+  que la cifra calculada —«4 min 48 s»— sea el objeto más grande de la pantalla, con la
+  etiqueta encima y pequeña. Es el activo diferencial de la red: enterrarlo en una fila
+  de tabla era regalarlo.
+- **Toda página tiene un `<h1>`.** Lo emite `PageHeader`. Ocho páginas no lo tenían
+  porque `Section` emite `<h2>`: un documento sin encabezado de primer nivel deja a
+  quien usa un lector de pantalla sin saber de qué va, y a los buscadores sin la señal
+  más fuerte que hay.
+- **El header es una isla flotante de una sola fila** que se contrae al bajar con
+  `animation-timeline: scroll()`. Sustituye a un header de dos filas cuya segunda era
+  una tira de once enlaces con scroll horizontal de la que solo se veían tres. Arriba
+  quedan las tres herramientas propias —horarios, punto exacto y visor—: lo que esta
+  red tiene y ninguna otra web del eclipse tiene, se ve siempre.
+- **Una sola taxonomía para las dos pantallas.** `src/i18n/navigation.ts` define cuatro
+  grupos —Cuándo, Dónde, Ir, Saber— y de ahí beben el menú, la barra inferior de móvil
+  y el pie. Que móvil y escritorio agrupen distinto obliga a aprender dos webs.
+- **El menú es la API de `popover`**: capa superior, cierre con Escape y al pulsar
+  fuera, sin una línea de JavaScript. Donde no haya soporte, el pie lleva todos los
+  enlaces igualmente.
+- **Todo lo que se mueve respeta `prefers-reduced-motion`**, y las entradas por scroll
+  usan `animation-timeline: view()` bajo `@supports`: cero JavaScript, cero
+  observadores, y donde no hay soporte el contenido simplemente ya está visible.
+- **`isolation: isolate` en el cuerpo, no `position` en los hijos.** El campo de
+  estrellas se coloca por detrás con `z-index: -1`. La alternativa —subir el contenido
+  a una capa superior— rompía el header: Tailwind v4 emite sus utilidades dentro de
+  `@layer utilities`, y **una regla sin capa gana a cualquier regla en capa por
+  especificidad que tenga la otra**, así que una regla suelta con `position: relative`
+  convertía en `relative` el `sticky` del header y el `fixed` de la barra inferior. Ni
+  `:where()` lo evitaba. Es la trampa a recordar al escribir CSS global en este
+  proyecto.
+- **El proxy propaga la ruta** en `x-eclipse-path`. Un layout de App Router no recibe la
+  ruta, y sin ella el conmutador de idioma tenía que apuntar siempre a la home: cambiar
+  a inglés desde una guía te sacaba de la guía.
+
+### Dos funciones que ganaron protagonismo
+
+- **`/visor`**: el visor de realidad aumentada tiene URL propia, metadatos e imagen
+  social. Antes vivía enterrado dentro del localizador y solo aparecía tras calcular un
+  resultado: no se podía enlazar, ni compartir, ni posicionar. Para la función más
+  diferencial de la red, ése era el error de producto más caro que había. Se titula
+  «¿Me lo tapa ese edificio?» y no «realidad aumentada» a propósito: la tecnología no
+  es el beneficio.
+- **`/calendar.ics`**: el eclipse como cita de calendario, con las horas de la ciudad
+  del tenant y dos avisos —el día antes y quince minutos antes de C1—. Es el único
+  mecanismo de retención que no depende de una lista de correo: quien entra hoy no
+  vuelve solo dentro de once meses, pero su teléfono sí le avisa. Las horas salen del
+  cálculo, no de una tabla escrita a mano.
 
 ---
 
@@ -659,6 +723,10 @@ Cosas que conviene no romper:
    interpolan del cálculo, también en los posts y dentro de las ilustraciones.
 9. **Ninguna imagen de la que no tengamos los derechos.** Las ilustraciones son SVG propio;
    si algún día hay fotos, van por el campo `photo` y con su crédito.
+10. **Ningún color literal en un componente.** Todo sale de las variables de
+    `globals.css`, o los cuatro dominios dejan de distinguirse.
+11. **Toda página nueva empieza por `PageHeader`**, que es quien emite el `<h1>`.
+12. **Toda animación nueva se apaga con `prefers-reduced-motion`.**
 
 ---
 
@@ -681,6 +749,12 @@ Cosas que conviene no romper:
 - Escribir los perfiles locales de Algeciras, La Línea y Melilla antes de comprar sus
   dominios: un dominio sin `src/content/local/` sirve la guía genérica y no compite.
 - Mapa interactivo de la franja de totalidad.
+- «Cuánto ganas si bajas X km»: dado un punto, cuántos segundos más de totalidad se
+  consiguen desplazándose y en qué dirección. Es *la* pregunta de Cádiz y de Málaga, el
+  cálculo ya la resuelve y nadie la responde.
+- Modo día D: el 2 de agosto de 2027 la portada debería ser un reloj en vivo con la fase
+  actual y el aviso de ponerse y quitarse el filtro. Ese día concentrará más tráfico que
+  los once meses anteriores juntos.
 - Posts de blog para Cádiz, Tarifa y Gibraltar cuando se activen esos dominios: hoy su
   `/blog` sale vacío y con `noindex`, que es el comportamiento correcto mientras no haya
   contenido propio de esas ciudades.

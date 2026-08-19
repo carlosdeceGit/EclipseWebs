@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Section } from "@/components/ui";
+import { PageHeader, Section } from "@/components/ui";
 import { ClassifiedForm } from "./ClassifiedForm";
 import { buildMetadata } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -45,17 +45,20 @@ export default async function NewClassifiedPage({
   const name = cityName(city, locale);
 
   return (
-    <Section
-      title={locale === "es" ? "Publicar un anuncio" : "Post an ad"}
-      lead={
-        locale === "es"
-          ? `Gratis y sin registro. El anuncio se publica en el tablón de ${name} después de una revisión manual.`
-          : `Free, no account needed. Your ad appears on the ${name} board after a manual review.`
-      }
-    >
-      <div className="max-w-2xl">
-        <ClassifiedForm locale={locale} />
-      </div>
-    </Section>
+    <>
+      <PageHeader
+        title={locale === "es" ? "Publicar un anuncio" : "Post an ad"}
+        lead={
+          locale === "es"
+            ? `Gratis y sin registro. El anuncio se publica en el tablón de ${name} después de una revisión manual.`
+            : `Free, no account needed. Your ad appears on the ${name} board after a manual review.`
+        }
+      />
+      <Section>
+        <div className="max-w-2xl">
+          <ClassifiedForm locale={locale} />
+        </div>
+      </Section>
+    </>
   );
 }

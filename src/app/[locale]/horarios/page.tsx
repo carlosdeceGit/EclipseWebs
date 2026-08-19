@@ -2,8 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection, AdSlot } from "@/components/AdSlot";
-import { Callout, Card, DataRow, Section } from "@/components/ui";
-import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
+import { EclipseTimeline } from "@/components/EclipseTimeline";
+import { Callout, Card, DataRow, Datum, PageHeader, Section } from "@/components/ui";
+import {
+  citiesByTotality,
+  cityName,
+  formatDuration,
+  formatObscuration,
+  toLocalTime,
+} from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, datasetGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
@@ -48,6 +55,10 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
   const t = getDictionary(locale);
   const name = cityName(city, locale);
   const duration = formatDuration(city.eclipse.totalitySeconds, locale);
+  // Sin segundos para el titular: al segundo está en la tabla de debajo.
+  const startShort =
+    toLocalTime(city.eclipse.totalityStart ?? city.eclipse.maximum, city.timeZone, false) ??
+    city.localTimes.maximum;
 
   return (
     <>
@@ -62,7 +73,8 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
       />
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(datasetGraph(tenant, locale))} />
 
-      <Section
+      <PageHeader
+        eyebrow={name}
         title={locale === "es" ? `Horarios del eclipse en ${name}` : `Eclipse timings in ${name}`}
         lead={
           locale === "es"
@@ -70,6 +82,43 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
             : `All times are local to ${name} (${city.timeZone}). The eclipse is on Monday 2 August 2027.`
         }
       >
+        {/* Las tres cifras que se buscan, antes de la tabla. La tabla sigue
+            estando: lo que cambia es que ya no hay que leerla para saber lo
+            esencial. */}
+        <div className="grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+          {city.eclipse.isTotal && duration ? (
+            <>
+              <Datum
+                label={locale === "es" ? "Empieza la totalidad" : "Totality begins"}
+                value={startShort}
+                note={t.common.localTime}
+                size="md"
+              />
+              <Datum label={locale === "es" ? "Duración" : "Duration"} value={duration} size="md" />
+              <Datum
+                label={t.data.obscuration}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
+                size="md"
+              />
+            </>
+          ) : (
+            <>
+              <Datum label={t.data.maximum} value={city.localTimes.maximum} note={t.common.localTime} size="md" />
+              <Datum
+                label={t.data.obscuration}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
+                size="md"
+              />
+            </>
+          )}
+        </div>
+
+        <div className="mt-10 max-w-4xl">
+          <EclipseTimeline city={city} locale={locale} />
+        </div>
+      </PageHeader>
+
+      <Section>
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <h2 className="mb-4 text-lg font-bold">

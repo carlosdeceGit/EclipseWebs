@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Badge, Callout, Card, Section } from "@/components/ui";
+import { Badge, Callout, Card, PageHeader, Section } from "@/components/ui";
 import { OWN_AD_PRICING } from "@/lib/ads";
 import { CITIES, cityName } from "@/lib/eclipse/cities";
 import { buildMetadata } from "@/lib/seo";
@@ -44,14 +44,15 @@ export default async function AdvertisePage({ params }: { params: Promise<{ loca
 
   return (
     <>
-      <Section
+      <PageHeader
         title={locale === "es" ? `Anúnciate en ${tenant.brand}` : `Advertise on ${tenant.brand}`}
         lead={
           locale === "es"
             ? `Quien llega a esta web ya ha decidido venir a ver el eclipse: busca dónde dormir, dónde comer, cómo llegar y qué hacer en ${name} esos días. Es una audiencia pequeña, muy concentrada en el tiempo y con intención de gasto altísima.`
             : `People who reach this site have already decided to come and see the eclipse: they are looking for where to sleep, where to eat, how to get there and what to do in ${name}. A small audience, tightly concentrated in time, with very high purchase intent.`
         }
-      >
+      />
+      <Section>
         <div className="grid gap-4 lg:grid-cols-3">
           {OWN_AD_PRICING.map((plan) => (
             <Card key={plan.id} className="flex h-full flex-col">
@@ -80,7 +81,7 @@ export default async function AdvertisePage({ params }: { params: Promise<{ loca
                 style={
                   plan.price === 0
                     ? { border: "1px solid hsl(var(--border))" }
-                    : { background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }
+                    : { background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }
                 }
               >
                 {plan.price === 0

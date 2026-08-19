@@ -185,7 +185,7 @@ export function ClassifiedForm({ locale }: { locale: Locale }) {
         type="submit"
         disabled={pending}
         className="rounded-xl px-5 py-3 font-semibold disabled:opacity-60"
-        style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+        style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
       >
         {pending ? c.sending : c.submit}
       </button>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdSlot } from "@/components/AdSlot";
-import { Section } from "@/components/ui";
+import { PageHeader, Section } from "@/components/ui";
 import { HOME_FAQ, SAFETY_FAQ } from "@/content/faq";
 import { buildMetadata, faqGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -73,7 +73,7 @@ export default async function FaqPage({ params }: { params: Promise<{ locale: st
         dangerouslySetInnerHTML={jsonLd(faqGraph([...general, ...safety]))}
       />
 
-      <Section
+      <PageHeader
         title={
           locale === "es"
             ? `Preguntas frecuentes sobre el eclipse en ${name}`
@@ -84,7 +84,8 @@ export default async function FaqPage({ params }: { params: Promise<{ locale: st
             ? "Respuestas cortas y directas. Si buscas el detalle, cada tema tiene su guía completa."
             : "Short, direct answers. For the detail, each topic has its own full guide."
         }
-      >
+      />
+      <Section>
         <div className="max-w-3xl space-y-8">
           <div>
             <h2 className="mb-4 text-xl font-bold">{locale === "es" ? "El eclipse" : "The eclipse"}</h2>

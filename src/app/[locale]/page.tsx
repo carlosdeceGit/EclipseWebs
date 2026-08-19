@@ -2,17 +2,128 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdSection, AdSlot } from "@/components/AdSlot";
+import { adSlotEnabled } from "@/lib/ads";
 import { Countdown } from "@/components/Countdown";
-import { Badge, Callout, Card, DataRow, Section } from "@/components/ui";
-import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
-import { ECLIPSE } from "@/lib/eclipse/event";
+import { EclipseTimeline } from "@/components/EclipseTimeline";
+import { HomeLocator, type HomeLocatorLabels, type LocatorFallback } from "@/components/HomeLocator";
+import { Badge, Callout, Card, DataRow, Datum, Section, TrustStrip, buttonStyle } from "@/components/ui";
+import {
+  citiesByTotality,
+  cityName,
+  formatDuration,
+  formatObscuration,
+  toLocalTime,
+} from "@/lib/eclipse/cities";
 import { buildMetadata, cityGraph, datasetGraph, faqGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
 import { HOME_FAQ } from "@/content/faq";
 import { editorialArticlesFor } from "@/content/articles";
 import { getDictionary } from "@/i18n/dictionary";
+import { navGroups } from "@/i18n/navigation";
 import { isLocale, localePath } from "@/i18n/config";
+
+/*
+  Textos de la portada que no están todavía en el diccionario global.
+
+  Son de esta página y solo de esta página; los que cruzan al widget de cliente
+  además no pueden ser funciones. Se suben al diccionario cuando alguno haga
+  falta en otro sitio.
+*/
+const COPY = {
+  es: {
+    startsLabel: "Empieza la totalidad",
+    durationLabel: "Duración",
+    coveredLabel: "Disco solar cubierto",
+    maximumLabel: "Máximo del eclipse",
+    sunAt: (deg: string) => `Sol a ${deg}° sobre el horizonte`,
+    trust:
+      "Calculado con los elementos besselianos de la NASA y validado contra las tablas del IGN en cada despliegue.",
+    trustLink: "Cómo lo calculamos",
+    addToCalendar: "Añadir a mi calendario",
+    addToCalendarNote:
+      "Descarga la cita con las horas de esta ciudad y dos avisos: uno el día antes y otro un cuarto de hora antes del primer contacto.",
+    timelineTitle: "Cuánto dura cada fase",
+    timelineLead:
+      "El eclipse entero dura casi tres horas. La totalidad —el único momento en el que se puede mirar sin filtro— es la astilla naranja.",
+    timelineLink: "Los cinco contactos, segundo a segundo",
+    safetyTitle: "Antes de nada: los ojos",
+    safetyMore: "Guía de seguridad completa",
+    glassesMore: "Cómo distinguir unas gafas certificadas",
+    dataTitle: "Todos los datos, dato a dato",
+    exploreTitle: "Todo lo demás",
+    exploreLead: "Agrupado igual que en el menú, para que no haya que buscar dos veces.",
+    localTitle: "Solo en esta web",
+    locator: {
+      eyebrow: "Tu punto exacto",
+      title: "¿Y desde donde yo voy a estar?",
+      lead: "La duración cambia kilómetro a kilómetro. Estas son las cifras de la ciudad; pulsa y las recalculamos para tus coordenadas exactas.",
+      cta: "Calcular en mi ubicación",
+      locating: "Localizando…",
+      error: "No hemos podido obtener tu ubicación. Puedes introducir las coordenadas a mano en el localizador.",
+      showingCity: "Datos de",
+      showingYou: "Datos de tu ubicación",
+      durationLabel: "Tu totalidad",
+      startsLabel: "Empieza a las",
+      coveredLabel: "Disco cubierto",
+      betterThanCity: "Desde aquí ganas {seconds} s respecto al centro de la ciudad.",
+      worseThanCity: "Desde aquí pierdes {seconds} s respecto al centro de la ciudad.",
+      sameAsCity: "Prácticamente lo mismo que en el centro de la ciudad.",
+      moveAdvice: "Estás a unos {km} km del centro de la franja.",
+      onCenterline: "Estás prácticamente en el centro de la franja. No te muevas.",
+      noTotality: "Desde aquí no hay totalidad: el Sol no llega a cubrirse del todo.",
+      openFull: "Localizador completo",
+      openViewer: "¿Me lo tapa un edificio?",
+      privacy: "Tus coordenadas se envían para calcular y no se guardan.",
+    },
+  },
+  en: {
+    startsLabel: "Totality begins",
+    durationLabel: "Duration",
+    coveredLabel: "Solar disc covered",
+    maximumLabel: "Maximum eclipse",
+    sunAt: (deg: string) => `Sun ${deg}° above the horizon`,
+    trust:
+      "Computed from NASA Besselian elements and validated against Spain's IGN tables on every deploy.",
+    trustLink: "How we compute it",
+    addToCalendar: "Add to my calendar",
+    addToCalendarNote:
+      "Downloads the event with this city's timings and two alerts: one the day before and one a quarter of an hour before first contact.",
+    timelineTitle: "How long each phase lasts",
+    timelineLead:
+      "The whole eclipse runs for almost three hours. Totality — the only moment you can look without a filter — is the orange sliver.",
+    timelineLink: "The five contacts, second by second",
+    safetyTitle: "First things first: your eyes",
+    safetyMore: "Full safety guide",
+    glassesMore: "How to tell certified glasses apart",
+    dataTitle: "Every figure, one by one",
+    exploreTitle: "Everything else",
+    exploreLead: "Grouped exactly as in the menu, so nothing has to be looked for twice.",
+    localTitle: "Only on this site",
+    locator: {
+      eyebrow: "Your exact spot",
+      title: "And from where I will actually be?",
+      lead: "Length changes kilometre by kilometre. These are the city's figures; tap and we recompute them for your exact coordinates.",
+      cta: "Compute at my location",
+      locating: "Locating…",
+      error: "We could not get your location. You can enter coordinates by hand in the locator.",
+      showingCity: "Figures for",
+      showingYou: "Figures for your location",
+      durationLabel: "Your totality",
+      startsLabel: "Begins at",
+      coveredLabel: "Disc covered",
+      betterThanCity: "From here you gain {seconds} s over the city centre.",
+      worseThanCity: "From here you lose {seconds} s against the city centre.",
+      sameAsCity: "Practically the same as the city centre.",
+      moveAdvice: "You are about {km} km from the centre of the path.",
+      onCenterline: "You are practically on the centre line. Do not move.",
+      noTotality: "There is no totality from here: the Sun is never fully covered.",
+      openFull: "Full locator",
+      openViewer: "Will a building block it?",
+      privacy: "Your coordinates are sent to compute and are not stored.",
+    },
+  },
+} as const;
 
 export async function generateMetadata({
   params,
@@ -54,10 +165,17 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
   const t = getDictionary(locale);
+  const copy = COPY[locale];
   const name = cityName(city, locale);
   const duration = formatDuration(city.eclipse.totalitySeconds, locale);
   const ranking = citiesByTotality().slice(0, 10);
   const faq = HOME_FAQ[locale];
+
+  // Sin segundos: en un titular, los segundos de la hora de contacto son ruido.
+  // La cifra al segundo está en la tabla de datos y en /horarios.
+  const startShort =
+    toLocalTime(city.eclipse.totalityStart ?? city.eclipse.maximum, city.timeZone, false) ??
+    city.localTimes.maximum;
 
   /*
     Las guías exclusivas de esta ciudad van las primeras: son las que este dominio
@@ -71,38 +189,18 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       return [`/${a.slug}`, content.shortTitle ?? content.title, content.description];
     });
 
-  const genericCards: [string, string, string][] =
-    locale === "es"
-      ? [
-          ["/localizador", "Localizador", "Tus horas exactas en tus coordenadas, no las del centro del pueblo."],
-          ["/horarios", "Horarios minuto a minuto", "Los cinco contactos, la hora del máximo y cuánto dura cada fase."],
-          ["/donde-verlo", "Dónde verlo", "Cómo elegir el punto: horizonte, altura, accesos y salida."],
-          ["/alojamiento", "Alojamiento", "Qué queda libre, qué precios esperar y por qué reservar ya."],
-          ["/eventos", "Eventos y observaciones", "Actividades de agrupaciones astronómicas y ayuntamientos."],
-          ["/como-llegar", "Cómo llegar", "Ferris, aeropuertos, carreteras y el atasco previsible del día 2."],
-          ["/clima", "Probabilidad de cielo despejado", "Qué dice la climatología de agosto y el efecto del levante."],
-          ["/seguridad", "Seguridad ocular", "Filtros certificados, cómo comprobarlos y cuándo quitárselos."],
-          ["/gafas-de-eclipse", "Gafas de eclipse", "Qué certificación exige España y cómo detectar una falsificación."],
-          ["/fotografia", "Fotografiar el eclipse", "Filtros, ajustes y la lista de tomas que da tiempo a hacer."],
-          ["/directorio", "Directorio de negocios", "Hoteles, restaurantes y servicios de la ciudad."],
-          ["/fuentes", "Fuentes y metodología", "Cómo calculamos las horas y contra qué las validamos."],
-        ]
-      : [
-          ["/localizador", "Locator", "Your exact timings at your coordinates, not the town centre's."],
-          ["/horarios", "Minute-by-minute timings", "The five contacts, maximum eclipse and how long each phase lasts."],
-          ["/donde-verlo", "Where to watch", "Choosing a spot: horizon, height, access and getting out."],
-          ["/alojamiento", "Where to stay", "What is left, what prices to expect and why to book now."],
-          ["/eventos", "Events and public viewings", "Activities from astronomy societies and councils."],
-          ["/como-llegar", "Getting there", "Ferries, airports, roads and the traffic to expect."],
-          ["/clima", "Chance of clear skies", "What August climatology says and the levante effect."],
-          ["/seguridad", "Eye safety", "Certified filters, how to check them and when to remove them."],
-          ["/gafas-de-eclipse", "Eclipse glasses", "What certification the EU requires and how to spot a fake."],
-          ["/fotografia", "Photographing it", "Filters, settings and the shots you actually have time for."],
-          ["/directorio", "Business directory", "Hotels, restaurants and services in the city."],
-          ["/fuentes", "Sources and method", "How we compute the timings and what we validate against."],
-        ];
+  const fallback: LocatorFallback = {
+    cityName: name,
+    isTotal: city.eclipse.isTotal,
+    duration: duration ?? "",
+    totalitySeconds: city.eclipse.totalitySeconds,
+    obscuration: formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal),
+    totalityStart: city.localTimes.totalityStart,
+    maximum: city.localTimes.maximum,
+  };
 
-  const planCards: [string, string, string][] = [...localCards, ...genericCards];
+  const locatorLabels: HomeLocatorLabels = { ...copy.locator };
+  const hasSidebarAd = adSlotEnabled("sidebar");
 
   return (
     <>
@@ -110,19 +208,66 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqGraph(faq))} />
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(datasetGraph(tenant, locale))} />
 
-      <section className="mx-auto max-w-6xl px-4 pb-4 pt-12 sm:pt-16">
+      {/*
+        Portada.
+
+        El orden es deliberado y responde a la escalera de preguntas con la que
+        llega quien busca este eclipse: cuándo pasa, cuánto dura, desde dónde lo
+        veo yo y qué necesito para no hacerme daño. Las cifras van **por delante**
+        de la prosa: en móvil, el párrafo de datos duros ocupaba seis líneas antes
+        del primer número.
+      */}
+      <section className="mx-auto max-w-6xl px-4 pb-6 pt-10 sm:pt-14">
         <Badge>{t.home.badge}</Badge>
-        <h1 className="mt-4 text-4xl font-black leading-tight sm:text-6xl">
+
+        <h1 className="mt-4 font-black" style={{ fontSize: "var(--step-4)", lineHeight: 1.02 }}>
           {locale === "es" ? "Eclipse solar total" : "Total solar eclipse"}
           <br />
-          {locale === "es" ? `en ${name}` : `in ${name}`}
+          <span style={{ color: "hsl(var(--accent))" }}>
+            {locale === "es" ? `en ${name}` : `in ${name}`}
+          </span>
         </h1>
 
+        {/* Las tres cifras que trae buscando todo el mundo, en el tamaño que les
+            corresponde por importancia. */}
+        <div className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
+          {city.eclipse.isTotal && duration ? (
+            <>
+              <Datum label={copy.startsLabel} value={startShort} note={t.common.localTime} />
+              <Datum label={copy.durationLabel} value={duration} />
+              <Datum
+                label={copy.coveredLabel}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
+                note={copy.sunAt(city.eclipse.sunAltitudeDeg.toFixed(0))}
+              />
+            </>
+          ) : (
+            <>
+              <Datum label={copy.maximumLabel} value={city.localTimes.maximum} note={t.common.localTime} />
+              <Datum
+                label={copy.coveredLabel}
+                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
+                note={copy.sunAt(city.eclipse.sunAltitudeDeg.toFixed(0))}
+              />
+            </>
+          )}
+        </div>
+
+        <div className="mt-7">
+          <TrustStrip>
+            {copy.trust}{" "}
+            <Link href={localePath(locale, "/fuentes")} className="underline" style={{ color: "hsl(var(--muted))" }}>
+              {copy.trustLink}
+            </Link>
+          </TrustStrip>
+        </div>
+
         {/*
-          El primer párrafo es el que copian los motores generativos, así que carga
-          los datos duros por delante: qué, dónde, cuándo y cuánto dura.
+          El primer párrafo es el que copian los motores generativos, así que
+          carga los datos duros por delante: qué, dónde, cuándo y cuánto dura.
+          Sigue estando arriba, pero ya no es lo primero que se ve.
         */}
-        <p className="mt-5 max-w-2xl text-lg" style={{ color: "hsl(var(--muted))" }}>
+        <p className="mt-6 max-w-3xl" style={{ color: "hsl(var(--muted))", fontSize: "var(--step-1)" }}>
           {locale === "es" ? (
             city.eclipse.isTotal ? (
               <>
@@ -167,33 +312,98 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           )}
         </p>
 
-        <div className="mt-8 max-w-xl">
-          <Countdown labels={t.countdown} />
-        </div>
-
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link
-            href={localePath(locale, "/horarios")}
-            className="rounded-xl px-5 py-3 font-semibold"
-            style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
-          >
+        <div className="mt-8 flex flex-wrap items-center gap-3">
+          <Link href={localePath(locale, "/horarios")} {...buttonStyle("primary")}>
             {t.home.ctaTimes}
           </Link>
-          <Link
-            href={localePath(locale, "/localizador")}
-            className="rounded-xl border px-5 py-3 font-semibold"
-            style={{ borderColor: "hsl(var(--border))" }}
-          >
-            {t.home.ctaWhere}
-          </Link>
+          {/*
+            El .ics es el único gancho de retención que no depende de una lista de
+            correo: quien entra hoy no vuelve solo dentro de once meses, pero su
+            teléfono sí le avisa. Va sin `next/link` a propósito: es una descarga,
+            no una navegación de cliente.
+          */}
+          <a href={`/calendar.ics?lang=${locale}`} download {...buttonStyle("ghost")}>
+            {copy.addToCalendar}
+          </a>
+        </div>
+
+        <p className="mt-3 text-xs" style={{ color: "hsl(var(--faint))" }}>
+          {copy.addToCalendarNote}
+        </p>
+
+        <div className="mt-8 max-w-xl">
+          <Countdown labels={t.countdown} variant="inline" />
         </div>
       </section>
 
+      {/* Cuánto dura cada fase, dibujado a escala. Va inmediatamente después del
+          hero porque responde con una imagen la pregunta más buscada. */}
+      <Section title={copy.timelineTitle} lead={copy.timelineLead}>
+        <div className="max-w-4xl">
+          <EclipseTimeline city={city} locale={locale} />
+          <p className="mt-5">
+            <Link
+              href={localePath(locale, "/horarios")}
+              className="underline"
+              style={{ color: "hsl(var(--accent))" }}
+            >
+              {copy.timelineLink}
+            </Link>
+          </p>
+        </div>
+      </Section>
+
+      {/*
+        El localizador, embebido y en el primer scroll. Es la pregunta que ninguna
+        otra web española del eclipse responde, y hasta ahora vivía detrás de un
+        enlace ciego entre otras once tarjetas iguales.
+      */}
+      <Section tone="feature">
+        <HomeLocator
+          locale={locale}
+          fallback={fallback}
+          labels={locatorLabels}
+          fullHref={localePath(locale, "/localizador")}
+          viewerHref={localePath(locale, "/visor")}
+        />
+      </Section>
+
+      {/*
+        Seguridad ocular, arriba y en rojo.
+
+        En el eclipse de 2024, «my eyes hurt» fue tendencia el día siguiente. Un
+        consejo que llega en la posición nueve llega tarde: aquí va antes que el
+        alojamiento, que los eventos y que cualquier anuncio.
+      */}
+      <Section title={copy.safetyTitle}>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Callout title={t.safety.title} tone="danger">
+            {t.safety.body}
+          </Callout>
+          <div className="flex flex-col justify-center gap-3">
+            <Link href={localePath(locale, "/seguridad")} {...buttonStyle("ghost")}>
+              {copy.safetyMore}
+            </Link>
+            <Link href={localePath(locale, "/gafas-de-eclipse")} {...buttonStyle("ghost")}>
+              {copy.glassesMore}
+            </Link>
+          </div>
+        </div>
+      </Section>
+
+      {/* El primer anuncio no aparece hasta aquí: por delante van las respuestas,
+          no el inventario. */}
       <AdSection name="header" locale={locale} />
 
-      <Section title={t.home.dataTitle(name)}>
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+      {/*
+        La columna lateral solo existe si hay anuncio que servir. La regla del
+        proyecto es que un hueco sin configurar no se dibuja; con una rejilla de
+        tres columnas fija, el hueco desaparecía pero la columna vacía se quedaba
+        y la tarjeta de datos se veía descentrada sin motivo.
+      */}
+      <Section title={copy.dataTitle}>
+        <div className={`grid gap-6 ${hasSidebarAd ? "lg:grid-cols-3" : ""}`}>
+          <Card className={hasSidebarAd ? "lg:col-span-2" : ""}>
             <dl>
               <DataRow label={t.data.date} value={t.data.dateValue} locale={locale} />
               <DataRow
@@ -217,25 +427,19 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               />
               <DataRow label={t.data.coordinates} value={`${city.lat.toFixed(4)}, ${city.lon.toFixed(4)}`} locale={locale} />
             </dl>
-            <p className="mt-4 text-xs" style={{ color: "hsl(var(--muted))" }}>
-              {locale === "es"
-                ? "Calculado con elementos besselianos de la NASA y validado contra las tablas del IGN."
-                : "Computed from NASA Besselian elements and validated against Spain's IGN tables."}{" "}
+            <p className="mt-4 text-xs" style={{ color: "hsl(var(--faint))" }}>
+              {copy.trust}{" "}
               <Link href={localePath(locale, "/fuentes")} className="underline">
                 {t.common.sources}
               </Link>
             </p>
           </Card>
 
-          <div className="space-y-6">
-            <Callout title={t.safety.title}>
-              {t.safety.body}{" "}
-              <Link href={localePath(locale, "/seguridad")} className="underline">
-                {t.safety.link}
-              </Link>
-            </Callout>
-            <AdSlot name="sidebar" locale={locale} className="hidden lg:flex" />
-          </div>
+          {hasSidebarAd && (
+            <div className="space-y-6">
+              <AdSlot name="sidebar" locale={locale} className="hidden lg:flex" />
+            </div>
+          )}
         </div>
       </Section>
 
@@ -266,10 +470,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                   <td className="py-3" style={{ color: "hsl(var(--muted))" }}>
                     {c.province}
                   </td>
-                  <td className="py-3 tabular-nums" style={{ color: "hsl(var(--muted))" }}>
+                  <td className="num py-3" style={{ color: "hsl(var(--muted))" }}>
                     {c.localTimes.totalityStart}
                   </td>
-                  <td className="py-3 text-right font-semibold tabular-nums">
+                  <td className="num py-3 text-right font-semibold">
                     {formatDuration(c.eclipse.totalitySeconds, locale)}
                   </td>
                 </tr>
@@ -286,17 +490,56 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       <AdSection name="inArticle" locale={locale} />
 
-      <Section title={t.home.planTitle}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {planCards.map(([href, title, desc]) => (
-            <Link key={href} href={localePath(locale, href)}>
-              <Card className="h-full transition hover:brightness-125">
-                <h3 className="font-semibold">{title}</h3>
-                <p className="mt-1.5 text-sm" style={{ color: "hsl(var(--muted))" }}>
-                  {desc}
-                </p>
-              </Card>
-            </Link>
+      {/* Las guías exclusivas del dominio, destacadas y con su propio titular: son
+          lo que esta web tiene y las demás de la red no. */}
+      {localCards.length > 0 && (
+        <Section title={copy.localTitle}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {localCards.map(([href, title, desc]) => (
+              <Link key={href} href={localePath(locale, href)}>
+                <Card interactive className="h-full">
+                  <h3 className="font-semibold" style={{ fontSize: "var(--step-1)" }}>
+                    {title}
+                  </h3>
+                  <p className="mt-1.5 text-sm" style={{ color: "hsl(var(--muted))" }}>
+                    {desc}
+                  </p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/*
+        El resto del contenido, agrupado igual que en el menú.
+
+        Antes eran doce tarjetas idénticas: una parrilla homogénea comunica «todo
+        importa lo mismo», que es justo lo contrario de lo que queremos decir.
+        Aquí las herramientas ya han tenido su sección propia y esto es el índice.
+      */}
+      <Section title={copy.exploreTitle} lead={copy.exploreLead}>
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {navGroups(locale).map((group) => (
+            <div key={group.id}>
+              <h3 className="datum-label" style={{ color: "hsl(var(--accent))" }}>
+                {group.label}
+              </h3>
+              <ul className="mt-3 space-y-3">
+                {group.items.map((item) => (
+                  <li key={item.href}>
+                    <Link href={localePath(locale, item.href)} className="group block">
+                      <span className="font-semibold group-hover:underline">{item.label}</span>
+                      {item.hint && (
+                        <span className="mt-0.5 block text-sm" style={{ color: "hsl(var(--muted))" }}>
+                          {item.hint}
+                        </span>
+                      )}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </div>
       </Section>
@@ -306,7 +549,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
           {faq.map((item) => (
             <details
               key={item.q}
-              className="rounded-2xl border p-5"
+              className="card-interactive rounded-2xl border p-5"
               style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
             >
               <summary className="cursor-pointer font-semibold">{item.q}</summary>

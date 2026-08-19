@@ -107,6 +107,7 @@ ${blogSection}
 - API de todas las localidades: ${origin}/api/eclipse
 - API para coordenadas arbitrarias: ${origin}/api/circumstances?lat=36.0143&lon=-5.6044
 - Localizador interactivo: ${origin}${localePath("es", "/localizador")}
+- Visor de cámara (dónde estará el Sol desde un punto): ${origin}${localePath("es", "/visor")}
 - Sitemap: ${origin}/sitemap.xml
 - Versión en inglés: ${origin}/en
 

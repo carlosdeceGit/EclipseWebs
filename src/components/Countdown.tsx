@@ -28,7 +28,18 @@ export interface CountdownLabels {
  * el reloj del servidor y el del navegador nunca coinciden al segundo, y renderizar
  * un número distinto en cada lado provoca un error de hidratación.
  */
-export function Countdown({ labels }: { labels: CountdownLabels }) {
+export function Countdown({
+  labels,
+  variant = "block",
+}: {
+  labels: CountdownLabels;
+  /**
+   * `inline` es la de la portada: una sola línea que acompaña al dato grande sin
+   * competir con él. A once meses vista la cuenta atrás es contexto, no
+   * protagonista; el protagonista es cuánto va a durar la totalidad.
+   */
+  variant?: "block" | "inline";
+}) {
   const [now, setNow] = useState<number | null>(null);
 
   useEffect(() => {
@@ -38,21 +49,46 @@ export function Countdown({ labels }: { labels: CountdownLabels }) {
   }, []);
 
   const parts = now === null ? null : split(ECLIPSE_TIMESTAMP_MS - now);
+  const keys = ["days", "hours", "minutes", "seconds"] as const;
+
+  if (variant === "inline") {
+    return (
+      <p
+        className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm"
+        role="timer"
+        aria-label={labels.label}
+        style={{ color: "hsl(var(--muted))" }}
+      >
+        {keys.map((key, i) => (
+          <span key={key} className="flex items-baseline gap-1">
+            <span
+              className="text-lg font-bold tabular-nums"
+              style={{ color: i === 0 ? "hsl(var(--accent))" : "hsl(var(--text))" }}
+            >
+              {parts ? String(parts[key]).padStart(2, "0") : "––"}
+            </span>
+            {labels[key]}
+          </span>
+        ))}
+      </p>
+    );
+  }
 
   return (
     <div className="grid grid-cols-4 gap-2 sm:gap-3" role="timer" aria-label={labels.label}>
-      {(["days", "hours", "minutes", "seconds"] as const).map((key) => (
+      {keys.map((key) => (
         <div
           key={key}
           className="rounded-xl border px-2 py-3 text-center sm:px-4"
           style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
         >
-          <div className="text-2xl font-bold tabular-nums sm:text-4xl" style={{ color: "hsl(var(--accent))" }}>
+          <div
+            className="font-bold tabular-nums"
+            style={{ color: "hsl(var(--accent))", fontSize: "var(--step-3)", lineHeight: 1 }}
+          >
             {parts ? String(parts[key]).padStart(2, "0") : "––"}
           </div>
-          <div className="mt-1 text-[10px] uppercase tracking-widest sm:text-xs" style={{ color: "hsl(var(--muted))" }}>
-            {labels[key]}
-          </div>
+          <div className="datum-label mt-1.5">{labels[key]}</div>
         </div>
       ))}
     </div>

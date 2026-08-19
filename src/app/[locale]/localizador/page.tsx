@@ -1,14 +1,15 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdSection, AdSlot } from "@/components/AdSlot";
-import { Callout, Section } from "@/components/ui";
+import { Callout, PageHeader, Section } from "@/components/ui";
 import { LocatorClient, type Preset } from "./LocatorClient";
 import { citiesByTotality, cityName } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
 import { getDictionary } from "@/i18n/dictionary";
-import { isLocale } from "@/i18n/config";
+import { isLocale, localePath } from "@/i18n/config";
 
 export async function generateMetadata({
   params,
@@ -73,7 +74,8 @@ export default async function LocatorPage({ params }: { params: Promise<{ locale
         )}
       />
 
-      <Section title={t.locator.title} lead={t.locator.lead}>
+      <PageHeader title={t.locator.title} lead={t.locator.lead} />
+      <Section>
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <LocatorClient
@@ -91,6 +93,14 @@ export default async function LocatorPage({ params }: { params: Promise<{ locale
             />
           </div>
           <div className="space-y-6">
+            <Callout title={locale === "es" ? "¿Y si me lo tapa un edificio?" : "And if a building blocks it?"}>
+              {locale === "es"
+                ? "El visor de cámara superpone la posición del Sol sobre lo que estás mirando, para comprobar si desde ese punto concreto hay algo en medio. "
+                : "The camera viewer overlays the Sun's position on what you are looking at, to check whether anything is in the way from that exact spot. "}
+              <Link href={localePath(locale, "/visor")} className="underline">
+                {locale === "es" ? "Abrir el visor" : "Open the viewer"}
+              </Link>
+            </Callout>
             <Callout title={t.safety.title}>{t.safety.body}</Callout>
             <AdSlot name="sidebar" locale={locale} className="hidden lg:flex" />
           </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection } from "@/components/AdSlot";
 import { ListingCard } from "@/components/ListingCard";
-import { Callout, Card, Section } from "@/components/ui";
+import { Callout, Card, PageHeader, Section } from "@/components/ui";
 import { CLASSIFIED_CATEGORIES, getListings } from "@/lib/db/listings";
 import { buildMetadata } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -56,14 +56,15 @@ export default async function ClassifiedsPage({
 
   return (
     <>
-      <Section
+      <PageHeader
         title={locale === "es" ? `Clasificados del eclipse en ${name}` : `Eclipse classifieds in ${name}`}
         lead={
           locale === "es"
             ? "Tablón entre particulares para los días del eclipse. Publicar es gratis; revisamos todos los anuncios antes de que aparezcan."
             : "A peer-to-peer board for the eclipse days. Posting is free; every ad is reviewed before it appears."
         }
-      >
+      />
+      <Section>
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <Link
             href={localePath(locale, "/clasificados")}
@@ -93,7 +94,7 @@ export default async function ClassifiedsPage({
           <Link
             href={localePath(locale, "/clasificados/nuevo")}
             className="ml-auto rounded-lg px-4 py-2 text-sm font-semibold"
-            style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
           >
             {locale === "es" ? "Publicar anuncio" : "Post an ad"}
           </Link>
@@ -118,7 +119,7 @@ export default async function ClassifiedsPage({
             <Link
               href={localePath(locale, "/clasificados/nuevo")}
               className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-semibold"
-              style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
             >
               {locale === "es" ? "Publicar gratis" : "Post for free"}
             </Link>
