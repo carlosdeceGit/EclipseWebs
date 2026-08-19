@@ -6,6 +6,7 @@ import { adSlotEnabled } from "@/lib/ads";
 import { Countdown } from "@/components/Countdown";
 import { EclipseTimeline } from "@/components/EclipseTimeline";
 import { HomeLocator, type HomeLocatorLabels, type LocatorFallback } from "@/components/HomeLocator";
+import { ViewerPromo } from "@/components/ViewerPromo";
 import { Badge, Callout, Card, DataRow, Datum, Section, TrustStrip, buttonStyle } from "@/components/ui";
 import {
   citiesByTotality,
@@ -73,7 +74,7 @@ const COPY = {
       onCenterline: "Estás prácticamente en el centro de la franja. No te muevas.",
       noTotality: "Desde aquí no hay totalidad: el Sol no llega a cubrirse del todo.",
       openFull: "Localizador completo",
-      openViewer: "¿Me lo tapa un edificio?",
+      openViewer: "Visor 360º",
       privacy: "Tus coordenadas se envían para calcular y no se guardan.",
     },
   },
@@ -119,7 +120,7 @@ const COPY = {
       onCenterline: "You are practically on the centre line. Do not move.",
       noTotality: "There is no totality from here: the Sun is never fully covered.",
       openFull: "Full locator",
-      openViewer: "Will a building block it?",
+      openViewer: "360º viewer",
       privacy: "Your coordinates are sent to compute and are not stored.",
     },
   },
@@ -351,6 +352,17 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
             </Link>
           </p>
         </div>
+      </Section>
+
+      {/*
+        El Visor 360º, con sección entera y dibujo propio.
+
+        Es la función que ninguna otra web del eclipse tiene, así que va aquí
+        arriba y no en una tarjeta más: la portada la enseña, el header la enseña
+        y la barra inferior la enseña.
+      */}
+      <Section tone="feature" id="visor">
+        <ViewerPromo city={city} locale={locale} />
       </Section>
 
       {/*

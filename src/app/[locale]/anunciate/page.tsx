@@ -76,7 +76,7 @@ export default async function AdvertisePage({ params }: { params: Promise<{ loca
                 ))}
               </ul>
               <Link
-                href={localePath(locale, plan.price === 0 ? "/clasificados/nuevo" : "/contacto")}
+                href={localePath(locale, plan.price === 0 ? "/publicar" : "/contacto")}
                 className="mt-5 block rounded-lg px-4 py-2.5 text-center text-sm font-semibold"
                 style={
                   plan.price === 0

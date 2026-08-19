@@ -20,7 +20,7 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         userAgent: "*",
         allow: "/",
         // El formulario y los filtros no aportan nada al índice y diluyen el crawl.
-        disallow: ["/api/", "/clasificados/nuevo", "/*?cat="],
+        disallow: ["/api/", "/clasificados/nuevo", "/*?tipo=", "/*?cat="],
       },
       {
         userAgent: [

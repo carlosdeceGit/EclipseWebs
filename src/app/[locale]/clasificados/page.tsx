@@ -92,7 +92,7 @@ export default async function ClassifiedsPage({
             </Link>
           ))}
           <Link
-            href={localePath(locale, "/clasificados/nuevo")}
+            href={localePath(locale, "/publicar") + "?tipo=particular"}
             className="ml-auto rounded-lg px-4 py-2 text-sm font-semibold"
             style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
           >
@@ -117,7 +117,7 @@ export default async function ClassifiedsPage({
                 : "Be the first. It works especially well for what no booking site covers: a spare room in your home for those days, seats in your car from your city, spare certified glasses, or somewhere to park a motorhome."}
             </p>
             <Link
-              href={localePath(locale, "/clasificados/nuevo")}
+              href={localePath(locale, "/publicar") + "?tipo=particular"}
               className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-semibold"
               style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
             >

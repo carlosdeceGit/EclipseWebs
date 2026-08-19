@@ -214,6 +214,7 @@ src/
     db/
       supabase.ts          clientes, degradan a null sin variables
       listings.ts          directorio y clasificados
+      events.ts            agenda de actos de la ciudad
   content/
     faq.ts                 FAQ bilingües
     articles/              guías largas bilingües, una por archivo
@@ -225,13 +226,17 @@ src/
     SiteChrome.tsx         header isla, menú a pantalla completa, barra inferior, pie
     Blocks.tsx             renderizador de bloques, compartido por guías y blog
     EclipseTimeline.tsx    los cinco contactos dibujados a escala
+    ViewerPromo.tsx        el Visor 360º en la portada, con su escena del cielo
+    EventCard.tsx          un acto de la agenda
     HomeLocator.tsx        el localizador embebido en la portada
     art/                   ilustraciones SVG propias (ver §7)
   app/
     [locale]/              todas las páginas
     [locale]/blog/         índice del blog y página de cada post
     [locale]/localizador/  localizador y visor AR de cámara (cliente)
-    [locale]/visor/        el visor AR con URL propia
+    [locale]/visor/        el Visor 360º con URL propia
+    [locale]/publicar/     alta pública: negocio, evento o anuncio de particular
+    [locale]/directorio/   alojamiento, eventos y actividades de la ciudad
     calendar.ics           el eclipse como cita de calendario, por tenant
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
@@ -368,8 +373,14 @@ Decisiones que conviene no revertir:
 - **El header es una isla flotante de una sola fila** que se contrae al bajar con
   `animation-timeline: scroll()`. Sustituye a un header de dos filas cuya segunda era
   una tira de once enlaces con scroll horizontal de la que solo se veían tres. Arriba
-  quedan las tres herramientas propias —horarios, punto exacto y visor—: lo que esta
-  red tiene y ninguna otra web del eclipse tiene, se ve siempre.
+  quedan cuatro apartados fijos —**Horarios, Visor 360º, Guía y Blog**—, el
+  conmutador de idioma y el botón de publicar. Los mismos cuatro están en la barra
+  inferior de móvil: `HEADER_NAV` y `MOBILE_NAV` son la misma constante a propósito.
+- **El conmutador de idioma es un control segmentado ES/EN, no una bandera.** Una
+  bandera identifica un país, no una lengua: para quien lee en inglés desde Marruecos
+  o desde Irlanda la bandera correcta no existe. Enseñar las dos opciones a la vez
+  dice además que la web está en dos idiomas, cosa que un enlace «English» no dice.
+  Cada mitad apunta a la traducción de la página actual.
 - **Una sola taxonomía para las dos pantallas.** `src/i18n/navigation.ts` define cuatro
   grupos —Cuándo, Dónde, Ir, Saber— y de ahí beben el menú, la barra inferior de móvil
   y el pie. Que móvil y escritorio agrupen distinto obliga a aprender dos webs.
@@ -399,6 +410,12 @@ Decisiones que conviene no revertir:
   diferencial de la red, ése era el error de producto más caro que había. Se titula
   «¿Me lo tapa ese edificio?» y no «realidad aumentada» a propósito: la tecnología no
   es el beneficio.
+- **`/publicar`**: un único formulario para las tres cosas que alguien de la ciudad
+  quiere dar de alta —su negocio o alojamiento, un acto con fecha, o un anuncio
+  entre particulares—. Antes solo existía el alta de clasificados y no había manera
+  de meter un hotel ni una observación pública: el directorio se quedaba vacío
+  esperando altas que nadie sabía cómo hacer. El tipo se elige arriba y el
+  formulario se adapta; `/clasificados/nuevo` redirige aquí de forma permanente.
 - **`/calendar.ics`**: el eclipse como cita de calendario, con las horas de la ciudad
   del tenant y dos avisos —el día antes y quince minutos antes de C1—. Es el único
   mecanismo de retención que no depende de una lista de correo: quien entra hoy no
@@ -589,6 +606,12 @@ del modelo** (`agents/guardrails.ts`). El prompt es una petición; esto es una b
 5. **Auditoría completa** en `agent_runs` y `agent_actions`.
 6. **La persona gana**: la moderación solo toca filas que siguen en `pending`.
 
+El agente de eventos escribe en la tabla `events`, que **ya se lee desde la web**:
+sale en `/directorio` como agenda de la ciudad. Antes se llenaba sin que nadie la
+mirara. Además de lo que encuentra el agente, cualquiera puede dar de alta un acto
+desde `/publicar`; entra como `pending` y se modera igual, y se le exige el mismo
+enlace comprobable que a las fuentes del agente.
+
 ### Los datos astronómicos no los escribe ningún agente
 
 Antes había un agente que proponía horarios. Ya no hace falta: se calculan y se validan.
@@ -758,7 +781,11 @@ Cosas que conviene no romper:
 - Posts de blog para Cádiz, Tarifa y Gibraltar cuando se activen esos dominios: hoy su
   `/blog` sale vacío y con `noindex`, que es el comportamiento correcto mientras no haya
   contenido propio de esas ciudades.
-- Autenticación para que los negocios gestionen su propia ficha.
+- Autenticación para que los negocios gestionen su propia ficha. Hoy el alta desde
+  `/publicar` es anónima y se modera a mano, que es lo correcto para empezar pero no
+  escala si el directorio se llena.
+- Panel de moderación. Las altas de `/publicar` entran como `pending` y ahora mismo
+  se aprueban desde el propio Supabase; con volumen hará falta una pantalla.
 - Ampliar el registro de 35 a los 115 municipios (el agente auditor propone los que faltan).
 - Comprar los dominios recomendados de §2 antes de que los cojan.
 - Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§9).

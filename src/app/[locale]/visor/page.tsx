@@ -21,8 +21,8 @@ const COPY = {
   es: {
     // El nombre de la función no es «realidad aumentada» a propósito: la
     // tecnología no es el beneficio, y quien busca esto lo busca con esta frase.
-    title: (city: string) => `¿Me lo tapa ese edificio? Dónde estará el Sol en ${city}`,
-    h1: "¿Me lo tapa ese edificio?",
+    title: (city: string) => `Visor 360º: dónde estará el Sol durante el eclipse en ${city}`,
+    h1: "Visor 360º: ¿me lo tapa ese edificio?",
     lead: (city: string, time: string) =>
       `Apunta con la cámara del móvil hacia donde vayas a estar el 2 de agosto y te marcamos el punto exacto del cielo donde estará el Sol a las ${time}, el instante del máximo en ${city}. Sirve para lo que ninguna tabla resuelve: saber si desde ese balcón, esa terraza o ese mirador se va a interponer un edificio, una grúa o una montaña.`,
     description: (city: string) =>
@@ -52,8 +52,8 @@ const COPY = {
     where: "Miradores de la ciudad, con la pega de cada uno",
   },
   en: {
-    title: (city: string) => `Will that building block it? Where the Sun will be in ${city}`,
-    h1: "Will that building block it?",
+    title: (city: string) => `360º viewer: where the Sun will be during the eclipse in ${city}`,
+    h1: "360º viewer: will that building block it?",
     lead: (city: string, time: string) =>
       `Point your phone's camera where you plan to be on 2 August and we mark the exact spot in the sky where the Sun will be at ${time}, the moment of maximum eclipse in ${city}. It answers what no table can: whether a building, a crane or a hillside will get in the way from that balcony, terrace or viewpoint.`,
     description: (city: string) =>

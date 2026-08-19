@@ -5,8 +5,8 @@ import { allCities } from "@/lib/eclipse/cities";
 import { TENANTS, type Tenant } from "@/lib/tenants";
 import type { CityWithCircumstances, Locale } from "@/lib/eclipse/types";
 import { getDictionary } from "@/i18n/dictionary";
-import { localePath } from "@/i18n/config";
-import { MOBILE_NAV, isActivePath, navGroups, type MobileDestination } from "@/i18n/navigation";
+import { LOCALES, LOCALE_LABELS, localePath } from "@/i18n/config";
+import { HEADER_NAV, MOBILE_NAV, isActivePath, navGroups, type MobileDestination } from "@/i18n/navigation";
 
 const LEGAL_LINKS: Record<Locale, [string, string][]> = {
   es: [
@@ -31,9 +31,12 @@ const CONSENT_LABEL: Record<Locale, string> = {
   en: "Cookie settings",
 };
 
-const MENU_LABEL: Record<Locale, { open: string; close: string; title: string }> = {
-  es: { open: "Menú", close: "Cerrar", title: "Todas las secciones" },
-  en: { open: "Menu", close: "Close", title: "All sections" },
+/** Etiqueta del grupo del conmutador. «English» servía como enlace, no como título. */
+const LANGUAGE_LABEL: Record<Locale, string> = { es: "Idioma", en: "Language" };
+
+const MENU_LABEL: Record<Locale, { open: string; close: string; title: string; publish: string }> = {
+  es: { open: "Menú", close: "Cerrar", title: "Todas las secciones", publish: "Publicar" },
+  en: { open: "Menu", close: "Close", title: "All sections", publish: "List yours" },
 };
 
 /** El identificador lo comparten el botón del header y el de la barra inferior. */
@@ -81,10 +84,78 @@ function Icon({ name, className = "h-5 w-5" }: { name: MobileDestination["icon"]
       </svg>
     );
   }
+  if (name === "book") {
+    return (
+      <svg {...common}>
+        <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2.5 2.5 0 0 1 2 1 2.5 2.5 0 0 1 2-1h4.5A1.5 1.5 0 0 1 20 5.5v12a1.5 1.5 0 0 1-1.5 1.5H14a2.5 2.5 0 0 0-2 1 2.5 2.5 0 0 0-2-1H5.5A1.5 1.5 0 0 1 4 17.5Z" />
+        <path d="M12 5v14" />
+      </svg>
+    );
+  }
+  if (name === "pen") {
+    return (
+      <svg {...common}>
+        <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17Z" />
+        <path d="M15 6.5 17.5 9" />
+      </svg>
+    );
+  }
+  if (name === "tag") {
+    return (
+      <svg {...common}>
+        <path d="M4 11V5a1 1 0 0 1 1-1h6l8 8-7 7-8-8Z" />
+        <circle cx="8.5" cy="8.5" r="1.2" />
+      </svg>
+    );
+  }
   return (
     <svg {...common}>
       <path d="M4 7h16M4 12h16M4 17h16" />
     </svg>
+  );
+}
+
+/**
+ * Conmutador de idioma.
+ *
+ * Es un control segmentado con los dos códigos y no una bandera suelta: una
+ * bandera identifica un país, no una lengua, y para quien busca en inglés desde
+ * Marruecos o desde Irlanda la bandera correcta no existe. Enseñar las dos
+ * opciones a la vez, con la activa marcada, además dice de un vistazo que la web
+ * está en dos idiomas — cosa que un solo enlace «English» no dice.
+ *
+ * Cada mitad apunta a la traducción de **esta** página, no a la home.
+ */
+function LocaleToggle({ locale, path }: { locale: Locale; path: string }) {
+  return (
+    <div
+      className="flex shrink-0 items-center rounded-full border p-0.5 text-xs font-bold"
+      style={{ borderColor: "hsl(var(--border-strong))" }}
+      role="group"
+      aria-label={LANGUAGE_LABEL[locale]}
+    >
+      {LOCALES.map((code) => {
+        const active = code === locale;
+        return (
+          <Link
+            key={code}
+            href={localePath(code, path)}
+            hrefLang={code}
+            aria-current={active ? "true" : undefined}
+            // El texto visible son dos letras; el nombre accesible, el idioma
+            // entero. «es» a secas no le dice nada a quien lo escucha.
+            aria-label={LOCALE_LABELS[code]}
+            className="flex min-h-[1.9rem] items-center rounded-full px-2.5 uppercase transition"
+            style={{
+              background: active ? "hsl(var(--accent))" : undefined,
+              color: active ? "hsl(var(--on-accent))" : "hsl(var(--muted))",
+            }}
+          >
+            {code}
+          </Link>
+        );
+      })}
+    </div>
   );
 }
 
@@ -126,8 +197,7 @@ export function Header({
   path: string;
 }) {
   const t = getDictionary(locale);
-  const other: Locale = locale === "es" ? "en" : "es";
-  const tools = MOBILE_NAV[locale];
+  const tools = HEADER_NAV[locale];
   const menu = MENU_LABEL[locale];
 
   return (
@@ -149,8 +219,8 @@ export function Header({
             <span className="whitespace-nowrap">{tenant.brand}</span>
           </Link>
 
-          {/* Las tres herramientas, siempre visibles a partir de tableta. En móvil
-              las cubre la barra inferior, que está más a mano. */}
+          {/* Los cuatro apartados fijos, siempre visibles a partir de tableta. En
+              móvil los cubre la barra inferior, que está más a mano. */}
           <nav className="ml-2 hidden items-center gap-1 md:flex" aria-label={t.common.sections}>
             {tools.map((item) => {
               const active = isActivePath(path, item.href);
@@ -173,21 +243,18 @@ export function Header({
           </nav>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            <Link
-              href={localePath(other, path)}
-              hrefLang={other}
-              className="tap hidden items-center whitespace-nowrap rounded-lg px-2.5 text-sm sm:inline-flex"
-              style={{ color: "hsl(var(--muted))" }}
-            >
-              {t.common.switchLanguage}
-            </Link>
+            <LocaleToggle locale={locale} path={path} />
 
+            {/* «Publicar» y no «Anúnciate»: quien tiene un apartamento libre o
+                monta una observación no se ve a sí mismo comprando publicidad, y
+                el alta básica de las tres cosas es gratis. */}
             <Link
-              href={localePath(locale, "/anunciate")}
-              className="tap hidden items-center whitespace-nowrap rounded-xl px-3.5 text-sm font-semibold lg:inline-flex"
+              href={localePath(locale, "/publicar")}
+              className="tap hidden items-center gap-2 whitespace-nowrap rounded-xl px-3.5 text-sm font-semibold lg:inline-flex"
               style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
             >
-              {t.common.advertise}
+              <Icon name="tag" className="h-4 w-4" />
+              {menu.publish}
             </Link>
 
             <button
@@ -224,7 +291,6 @@ export function Header({
 function SiteMenu({ locale, path, tenant }: { locale: Locale; path: string; tenant: Tenant }) {
   const t = getDictionary(locale);
   const menu = MENU_LABEL[locale];
-  const other: Locale = locale === "es" ? "en" : "es";
   const groups = navGroups(locale);
   const otherSites = TENANTS.filter((x) => x.domain !== tenant.domain);
 
@@ -296,8 +362,9 @@ function SiteMenu({ locale, path, tenant }: { locale: Locale; path: string; tena
           className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 border-t pt-6 text-sm"
           style={{ borderColor: "hsl(var(--border))" }}
         >
-          <Link href={localePath(other, path)} hrefLang={other} style={{ color: "hsl(var(--muted))" }}>
-            {t.common.switchLanguage}
+          <LocaleToggle locale={locale} path={path} />
+          <Link href={localePath(locale, "/publicar")} style={{ color: "hsl(var(--muted))" }}>
+            {menu.publish}
           </Link>
           <Link href={localePath(locale, "/anunciate")} style={{ color: "hsl(var(--muted))" }}>
             {t.common.advertise}
@@ -334,7 +401,7 @@ export function BottomNav({ locale, path }: { locale: Locale; path: string }) {
       className="bottom-nav fixed inset-x-0 bottom-0 z-40 md:hidden"
       aria-label={getDictionary(locale).common.sections}
     >
-      <ul className="mx-auto flex max-w-md items-stretch">
+      <ul className="mx-auto flex max-w-lg items-stretch">
         {items.map((item) => {
           const active = isActivePath(path, item.href);
           return (
@@ -342,7 +409,7 @@ export function BottomNav({ locale, path }: { locale: Locale; path: string }) {
               <Link
                 href={localePath(locale, item.href)}
                 aria-current={active ? "page" : undefined}
-                className="tap flex flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium"
+                className="tap flex flex-col items-center justify-center gap-1 px-0.5 py-2 text-center text-[10px] font-medium leading-tight"
                 style={{ color: active ? "hsl(var(--accent))" : "hsl(var(--muted))" }}
               >
                 <Icon name={item.icon} className="h-5 w-5" />
@@ -355,7 +422,7 @@ export function BottomNav({ locale, path }: { locale: Locale; path: string }) {
           <button
             type="button"
             popoverTarget={MENU_ID}
-            className="tap flex w-full flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium"
+            className="tap flex w-full flex-col items-center justify-center gap-1 px-0.5 py-2 text-center text-[10px] font-medium leading-tight"
             style={{ color: "hsl(var(--muted))" }}
           >
             <Icon name="menu" className="h-5 w-5" />

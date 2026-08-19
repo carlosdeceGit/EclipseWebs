@@ -44,7 +44,7 @@ const ES: NavGroup[] = [
     label: "Dónde",
     items: [
       { href: "/localizador", label: "Tu punto exacto", hint: "Tus horas en tus coordenadas, no las del centro del pueblo.", tool: true },
-      { href: "/visor", label: "¿Me lo tapa ese edificio?", hint: "Apunta con la cámara y mira dónde estará el Sol.", tool: true },
+      { href: "/visor", label: "Visor 360º", hint: "Apunta con la cámara y mira si un edificio te tapa el Sol.", tool: true },
       { href: "/donde-verlo", label: "Dónde verlo", hint: "Miradores, con la pega de cada uno." },
       { href: "/clima", label: "Probabilidad de cielo despejado", hint: "Climatología de agosto y el efecto del levante." },
     ],
@@ -55,8 +55,9 @@ const ES: NavGroup[] = [
     items: [
       { href: "/como-llegar", label: "Cómo llegar", hint: "Ferris, aeropuertos y el atasco previsible." },
       { href: "/alojamiento", label: "Alojamiento", hint: "Qué queda libre y qué precios esperar." },
-      { href: "/eventos", label: "Eventos y observaciones", hint: "Agrupaciones astronómicas y ayuntamientos." },
-      { href: "/directorio", label: "Directorio de negocios", hint: "Hoteles, restaurantes y servicios." },
+      { href: "/eventos", label: "Eventos y observaciones", hint: "Qué organizan agrupaciones astronómicas y ayuntamientos." },
+      { href: "/directorio", label: "Directorio de la ciudad", hint: "Alojamiento, eventos y actividades, con su ficha y su contacto." },
+      { href: "/publicar", label: "Publica lo tuyo", hint: "Da de alta tu alojamiento, tu evento o tu actividad. Gratis." },
       { href: "/clasificados", label: "Clasificados", hint: "Anuncios entre particulares." },
     ],
   },
@@ -89,7 +90,7 @@ const EN: NavGroup[] = [
     label: "Where",
     items: [
       { href: "/localizador", label: "Your exact spot", hint: "Your timings at your coordinates, not the town centre's.", tool: true },
-      { href: "/visor", label: "Will that building block it?", hint: "Point your camera and see where the Sun will be.", tool: true },
+      { href: "/visor", label: "360º viewer", hint: "Point your camera and see whether a building blocks the Sun.", tool: true },
       { href: "/donde-verlo", label: "Where to watch", hint: "Viewpoints, each with its catch." },
       { href: "/clima", label: "Chance of clear skies", hint: "August climatology and the levante effect." },
     ],
@@ -101,7 +102,8 @@ const EN: NavGroup[] = [
       { href: "/como-llegar", label: "Getting there", hint: "Ferries, airports and the traffic to expect." },
       { href: "/alojamiento", label: "Where to stay", hint: "What is left and what prices to expect." },
       { href: "/eventos", label: "Events and public viewings", hint: "Astronomy societies and councils." },
-      { href: "/directorio", label: "Business directory", hint: "Hotels, restaurants and services." },
+      { href: "/directorio", label: "City directory", hint: "Accommodation, events and activities, each with its contact." },
+      { href: "/publicar", label: "List yours", hint: "Add your accommodation, event or activity. Free." },
       { href: "/clasificados", label: "Classifieds", hint: "Ads between individuals." },
     ],
   },
@@ -135,21 +137,32 @@ export function navGroups(locale: Locale): NavGroup[] {
 export interface MobileDestination {
   href: string;
   label: string;
-  icon: "clock" | "pin" | "camera" | "menu";
+  icon: "clock" | "pin" | "camera" | "menu" | "book" | "pen" | "tag";
 }
 
 export const MOBILE_NAV: Record<Locale, MobileDestination[]> = {
   es: [
     { href: "/horarios", label: "Horarios", icon: "clock" },
-    { href: "/localizador", label: "Mi punto", icon: "pin" },
-    { href: "/visor", label: "Visor", icon: "camera" },
+    { href: "/visor", label: "Visor 360º", icon: "camera" },
+    { href: "/guia", label: "Guía", icon: "book" },
+    { href: "/blog", label: "Blog", icon: "pen" },
   ],
   en: [
     { href: "/horarios", label: "Timings", icon: "clock" },
-    { href: "/localizador", label: "My spot", icon: "pin" },
-    { href: "/visor", label: "Viewer", icon: "camera" },
+    { href: "/visor", label: "360º viewer", icon: "camera" },
+    { href: "/guia", label: "Guide", icon: "book" },
+    { href: "/blog", label: "Blog", icon: "pen" },
   ],
 };
+
+/**
+ * Los cuatro apartados fijos del header, iguales en las dos pantallas.
+ *
+ * Son los mismos que la barra inferior de móvil a propósito: el usuario aprende
+ * una sola web. Lo demás vive en el panel completo, que abren tanto el botón del
+ * header como el de la barra.
+ */
+export const HEADER_NAV = MOBILE_NAV;
 
 /**
  * Grupo al que pertenece un camino, para marcar el activo en la navegación.
