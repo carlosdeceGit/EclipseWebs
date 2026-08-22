@@ -3,18 +3,12 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AdSection, AdSlot } from "@/components/AdSlot";
 import { adSlotEnabled } from "@/lib/ads";
-import { Countdown } from "@/components/Countdown";
 import { EclipseTimeline } from "@/components/EclipseTimeline";
+import { Hero } from "@/components/Hero";
 import { HomeLocator, type HomeLocatorLabels, type LocatorFallback } from "@/components/HomeLocator";
 import { ViewerPromo } from "@/components/ViewerPromo";
-import { Badge, Callout, Card, DataRow, Datum, Section, TrustStrip, buttonStyle } from "@/components/ui";
-import {
-  citiesByTotality,
-  cityName,
-  formatDuration,
-  formatObscuration,
-  toLocalTime,
-} from "@/lib/eclipse/cities";
+import { Badge, Callout, Card, DataRow, Section, buttonStyle } from "@/components/ui";
+import { citiesByTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { buildMetadata, cityGraph, datasetGraph, faqGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
@@ -172,12 +166,6 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const ranking = citiesByTotality().slice(0, 10);
   const faq = HOME_FAQ[locale];
 
-  // Sin segundos: en un titular, los segundos de la hora de contacto son ruido.
-  // La cifra al segundo está en la tabla de datos y en /horarios.
-  const startShort =
-    toLocalTime(city.eclipse.totalityStart ?? city.eclipse.maximum, city.timeZone, false) ??
-    city.localTimes.maximum;
-
   /*
     Las guías exclusivas de esta ciudad van las primeras: son las que este dominio
     tiene y ningún otro de la red, así que son también el enlace interno que más
@@ -209,66 +197,15 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqGraph(faq))} />
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(datasetGraph(tenant, locale))} />
 
+      <Hero tenant={tenant} city={city} locale={locale} />
+
       {/*
-        Portada.
-
-        El orden es deliberado y responde a la escalera de preguntas con la que
-        llega quien busca este eclipse: cuándo pasa, cuánto dura, desde dónde lo
-        veo yo y qué necesito para no hacerme daño. Las cifras van **por delante**
-        de la prosa: en móvil, el párrafo de datos duros ocupaba seis líneas antes
-        del primer número.
+        El primer párrafo es el que copian los motores generativos, así que carga
+        los datos duros por delante: qué, dónde, cuándo y cuánto dura. Va justo
+        debajo del hero, que es el primer texto corrido de la página.
       */}
-      <section className="mx-auto max-w-6xl px-4 pb-6 pt-10 sm:pt-14">
-        <Badge>{t.home.badge}</Badge>
-
-        <h1 className="mt-4 font-black" style={{ fontSize: "var(--step-4)", lineHeight: 1.02 }}>
-          {locale === "es" ? "Eclipse solar total" : "Total solar eclipse"}
-          <br />
-          <span style={{ color: "hsl(var(--accent))" }}>
-            {locale === "es" ? `en ${name}` : `in ${name}`}
-          </span>
-        </h1>
-
-        {/* Las tres cifras que trae buscando todo el mundo, en el tamaño que les
-            corresponde por importancia. */}
-        <div className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2 lg:grid-cols-3">
-          {city.eclipse.isTotal && duration ? (
-            <>
-              <Datum label={copy.startsLabel} value={startShort} note={t.common.localTime} />
-              <Datum label={copy.durationLabel} value={duration} />
-              <Datum
-                label={copy.coveredLabel}
-                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
-                note={copy.sunAt(city.eclipse.sunAltitudeDeg.toFixed(0))}
-              />
-            </>
-          ) : (
-            <>
-              <Datum label={copy.maximumLabel} value={city.localTimes.maximum} note={t.common.localTime} />
-              <Datum
-                label={copy.coveredLabel}
-                value={formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
-                note={copy.sunAt(city.eclipse.sunAltitudeDeg.toFixed(0))}
-              />
-            </>
-          )}
-        </div>
-
-        <div className="mt-7">
-          <TrustStrip>
-            {copy.trust}{" "}
-            <Link href={localePath(locale, "/fuentes")} className="underline" style={{ color: "hsl(var(--muted))" }}>
-              {copy.trustLink}
-            </Link>
-          </TrustStrip>
-        </div>
-
-        {/*
-          El primer párrafo es el que copian los motores generativos, así que
-          carga los datos duros por delante: qué, dónde, cuándo y cuánto dura.
-          Sigue estando arriba, pero ya no es lo primero que se ve.
-        */}
-        <p className="mt-6 max-w-3xl" style={{ color: "hsl(var(--muted))", fontSize: "var(--step-1)" }}>
+      <section className="mx-auto max-w-6xl px-4 pt-10">
+        <p className="max-w-3xl" style={{ color: "hsl(var(--muted))", fontSize: "var(--step-1)" }}>
           {locale === "es" ? (
             city.eclipse.isTotal ? (
               <>
@@ -277,8 +214,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 <strong style={{ color: "hsl(var(--text))" }}>{duration}</strong>, entre las{" "}
                 <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.totalityStart}</strong> y
                 las <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.totalityEnd}</strong>{" "}
-                hora local, con el Sol a {city.eclipse.sunAltitudeDeg.toFixed(0)}° sobre el horizonte.{" "}
-                {city.hook.es}
+                hora local, con el Sol a {city.eclipse.sunAltitudeDeg.toFixed(0)}° sobre el horizonte.
               </>
             ) : (
               <>
@@ -288,7 +224,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                   {formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
                 </strong>{" "}
                 del disco solar cubierto a las{" "}
-                <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.maximum}</strong>. {city.hook.es}
+                <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.maximum}</strong>.
               </>
             )
           ) : city.eclipse.isTotal ? (
@@ -298,7 +234,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               <strong style={{ color: "hsl(var(--text))" }}>{duration}</strong>, between{" "}
               <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.totalityStart}</strong> and{" "}
               <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.totalityEnd}</strong> local
-              time, with the Sun {city.eclipse.sunAltitudeDeg.toFixed(0)}° above the horizon. {city.hook.en}
+              time, with the Sun {city.eclipse.sunAltitudeDeg.toFixed(0)}° above the horizon.
             </>
           ) : (
             <>
@@ -308,32 +244,23 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                 {formatObscuration(city.eclipse.obscuration, city.eclipse.isTotal)}
               </strong>{" "}
               of the solar disc covered at{" "}
-              <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.maximum}</strong>. {city.hook.en}
+              <strong style={{ color: "hsl(var(--text))" }}>{city.localTimes.maximum}</strong>.
             </>
           )}
         </p>
 
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link href={localePath(locale, "/horarios")} {...buttonStyle("primary")}>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href={localePath(locale, "/horarios")} {...buttonStyle("ghost")}>
             {t.home.ctaTimes}
           </Link>
           {/*
             El .ics es el único gancho de retención que no depende de una lista de
             correo: quien entra hoy no vuelve solo dentro de once meses, pero su
-            teléfono sí le avisa. Va sin `next/link` a propósito: es una descarga,
-            no una navegación de cliente.
+            teléfono sí le avisa. Va sin `next/link` a propósito: es una descarga.
           */}
           <a href={`/calendar.ics?lang=${locale}`} download {...buttonStyle("ghost")}>
             {copy.addToCalendar}
           </a>
-        </div>
-
-        <p className="mt-3 text-xs" style={{ color: "hsl(var(--faint))" }}>
-          {copy.addToCalendarNote}
-        </p>
-
-        <div className="mt-8 max-w-xl">
-          <Countdown labels={t.countdown} variant="inline" />
         </div>
       </section>
 

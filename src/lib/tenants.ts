@@ -18,6 +18,27 @@ export interface Tenant {
   accentHsl: string;
   /** ID de AdSense propio del dominio, si se gestiona por separado. */
   adsenseClientId?: string;
+  /**
+   * Imagen de fondo del hero.
+   *
+   * Es opcional y el hero está diseñado para verse bien sin ella: mientras no
+   * exista se dibuja una corona en SVG. Cuando haya archivo, se pone aquí y ya.
+   *
+   * `credit` es obligatorio en cuanto la imagen no sea un dibujo propio. La regla
+   * 9 del proyecto dice que no publicamos imágenes de las que no tengamos los
+   * derechos, y una imagen generada tiene que decir que lo es: el eclipse aún no
+   * ha ocurrido, así que cualquier imagen realista es necesariamente inventada y
+   * presentarla como documento sería exactamente el tipo de cosa que esta red no
+   * hace.
+   *
+   * `focal` es el `background-position`: el punto de la imagen que nunca se debe
+   * recortar. En un cielo con el Sol arriba a la derecha, algo como "70% 30%".
+   */
+  hero?: {
+    src: string;
+    credit: string;
+    focal?: string;
+  };
 }
 
 /**
