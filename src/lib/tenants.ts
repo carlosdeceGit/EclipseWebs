@@ -57,6 +57,12 @@ export const TENANTS: Tenant[] = [
     citySlug: "ceuta",
     brand: "Ceuta Eclipse",
     accentHsl: "28 96% 56%",
+    hero: {
+      src: "/hero/ceuta.webp",
+      credit:
+        "Ilustración generada con IA a partir del paisaje real de Ceuta y el Estrecho. El eclipse del 2 de agosto de 2027 todavía no ha ocurrido: no es una fotografía.",
+      focal: "52% 38%",
+    },
   },
   {
     // Canónico el .es, que es el dominio en propiedad. El .com se deja declarado
@@ -101,6 +107,19 @@ const HUB_TEMPLATE: Omit<Tenant, "domain" | "aliases"> = {
   citySlug: "ceuta",
   brand: "Eclipse 2027",
   accentHsl: "28 96% 56%",
+  /*
+    El hub habla de Ceuta —es su `citySlug`—, así que lleva su misma imagen. No es
+    un detalle estético: los despliegues de previsualización de Vercel salen por un
+    host `*.vercel.app`, que cae aquí. Sin esta línea, cualquiera que revise un
+    cambio del hero en una preview vería el estado sin imagen y concluiría que no
+    funciona.
+  */
+  hero: {
+    src: "/hero/ceuta.webp",
+    credit:
+      "Ilustración generada con IA a partir del paisaje real de Ceuta y el Estrecho. El eclipse del 2 de agosto de 2027 todavía no ha ocurrido: no es una fotografía.",
+    focal: "52% 38%",
+  },
 };
 
 /** Tenant de reserva para cuando no hay Host que valga (renderizado sin petición). */
