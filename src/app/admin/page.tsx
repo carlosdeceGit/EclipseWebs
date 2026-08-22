@@ -11,6 +11,7 @@ import {
   restoreListing,
 } from "./actions";
 import { adminConfigured, isAdmin } from "@/lib/admin/auth";
+import { dbStatus } from "@/lib/db/supabase";
 import {
   moderationAvailable,
   pendingCounts,
@@ -280,6 +281,14 @@ function EventCard({ row, decided }: { row: PendingEvent; decided?: boolean }) {
   );
 }
 
+function Check({ ok }: { ok: boolean }) {
+  return (
+    <span aria-hidden="true" style={{ color: ok ? "hsl(var(--success))" : "hsl(var(--danger))" }}>
+      {ok ? "✓" : "✗"}
+    </span>
+  );
+}
+
 /** Cabecera del panel. Lleva el botón de salir, que tiene que existir siempre. */
 function Header({ summary }: { summary: string }) {
   return (
@@ -320,12 +329,44 @@ export default async function AdminPage() {
   }
 
   if (!moderationAvailable()) {
+    /*
+      Diagnóstico en vez de un «no hay base de datos» a secas.
+
+      Con la integración de Vercel inyectando las variables sola, el fallo típico
+      no es que falten todas: es que falta una, o que apuntan a otro proyecto de
+      Supabase. Enseñar qué llegó —sin enseñar ninguna clave— ahorra el rato de
+      ir probando.
+    */
+    const status = dbStatus();
     return (
       <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
         <Header summary="sin conexión con la base de datos" />
         <p className="mt-8" style={{ color: "hsl(var(--muted))" }}>
-          Falta <code>SUPABASE_SERVICE_ROLE_KEY</code> en el entorno. El panel lee y escribe con la clave de
-          service role, que es la única que ve lo que todavía está pendiente.
+          El panel lee y escribe con la clave de service role, que es la única que ve lo que todavía está
+          pendiente. Ahora mismo el entorno tiene esto:
+        </p>
+        <ul className="mt-5 space-y-2 text-sm">
+          <li>
+            <Check ok={Boolean(status.url)} /> URL del proyecto:{" "}
+            {status.url ? <code>{status.url}</code> : <em>sin definir</em>}
+          </li>
+          <li>
+            <Check ok={status.hasAnonKey} /> Clave pública (anon o publishable)
+          </li>
+          <li>
+            <Check ok={status.hasServiceKey} /> Clave de service role
+          </li>
+        </ul>
+        <p className="mt-6 text-sm" style={{ color: "hsl(var(--faint))" }}>
+          {status.presentNames.length > 0 ? (
+            <>Variables definidas: {status.presentNames.map((n) => <code key={n}>{n} </code>)}</>
+          ) : (
+            "No hay ninguna variable de Supabase definida en este entorno."
+          )}
+        </p>
+        <p className="mt-4 text-sm" style={{ color: "hsl(var(--faint))" }}>
+          Comprueba también que el host de arriba es el del proyecto correcto: con varios proyectos en la
+          cuenta, la integración puede haber enlazado otro.
         </p>
       </main>
     );
