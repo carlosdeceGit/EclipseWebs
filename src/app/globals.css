@@ -330,7 +330,7 @@ p {
 .hero-media {
   position: absolute;
   inset: 0;
-  z-index: -2;
+  z-index: -20;
   background-size: cover;
   background-position: var(--hero-focal, 50% 40%);
 }
@@ -343,7 +343,7 @@ p {
 .hero-scrim {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: -10;
   background:
     linear-gradient(
       to bottom,

@@ -66,7 +66,7 @@ const TEXT: Record<
  */
 function CoronaArt() {
   return (
-    <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none absolute inset-0 -z-30 overflow-hidden" aria-hidden="true">
       {/*
         En móvil la corona se va casi entera fuera del encuadre y baja de opacidad.
         Centrada y a plena luz quedaba **detrás del titular**, y el texto blanco
@@ -168,7 +168,14 @@ export function Hero({
 
   return (
     <section className="hero">
-      {image ? (
+      {/*
+        La corona va siempre debajo, y la imagen encima cuando hay. No es
+        redundante: si el archivo todavía no está subido, o si algún día da 404,
+        lo que queda no es un hero negro sino el hero de siempre. Eso permite
+        además declarar la imagen en `tenants.ts` antes de tenerla.
+      */}
+      <CoronaArt />
+      {image && (
         <>
           <div
             className="hero-media"
@@ -181,8 +188,6 @@ export function Hero({
           />
           <div className="hero-scrim" />
         </>
-      ) : (
-        <CoronaArt />
       )}
 
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-12 sm:pt-16 lg:pb-14 lg:pt-24">
