@@ -49,6 +49,7 @@ const COPY = {
     exploreTitle: "Todo lo demás",
     exploreLead: "Agrupado igual que en el menú, para que no haya que buscar dos veces.",
     localTitle: "Solo en esta web",
+    rankingDelta: "Frente a la mejor",
     locator: {
       eyebrow: "Tu punto exacto",
       title: "¿Y desde donde yo voy a estar?",
@@ -95,6 +96,7 @@ const COPY = {
     exploreTitle: "Everything else",
     exploreLead: "Grouped exactly as in the menu, so nothing has to be looked for twice.",
     localTitle: "Only on this site",
+    rankingDelta: "vs. the best",
     locator: {
       eyebrow: "Your exact spot",
       title: "And from where I will actually be?",
@@ -164,6 +166,9 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const name = cityName(city, locale);
   const duration = formatDuration(city.eclipse.totalitySeconds, locale);
   const ranking = citiesByTotality().slice(0, 10);
+  // La escala de las barras la fija la fila más larga de la tabla, no el máximo
+  // absoluto del eclipse: si no, todas las barras salen cortas y no comparan nada.
+  const longest = ranking[0]?.eclipse.totalitySeconds ?? 0;
   const faq = HOME_FAQ[locale];
 
   /*
@@ -384,19 +389,20 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
 
       <Section title={t.home.rankingTitle} lead={t.home.rankingLead}>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-left text-sm">
+          <table className="data-table min-w-[40rem] text-sm">
             <thead>
-              <tr style={{ color: "hsl(var(--muted))" }}>
-                <th className="pb-3 font-medium">{t.data.locality}</th>
-                <th className="pb-3 font-medium">{t.data.province}</th>
-                <th className="pb-3 font-medium">{t.data.totalityStart.replace(/^C2 · /, "")}</th>
-                <th className="pb-3 text-right font-medium">{t.data.duration}</th>
+              <tr>
+                <th>{t.data.locality}</th>
+                <th>{t.data.province}</th>
+                <th>{t.data.totalityStart.replace(/^C2 · /, "")}</th>
+                <th className="text-right">{t.data.duration}</th>
+                <th className="text-right">{copy.rankingDelta}</th>
               </tr>
             </thead>
             <tbody>
               {ranking.map((c) => (
-                <tr key={c.slug} className="border-t" style={{ borderColor: "hsl(var(--border))" }}>
-                  <td className="py-3 font-semibold">
+                <tr key={c.slug} data-self={c.slug === city.slug ? "true" : undefined}>
+                  <td className="font-semibold">
                     <Link href={localePath(locale, `/ciudades/${c.slug}`)} className="hover:underline">
                       {cityName(c, locale)}
                     </Link>
@@ -406,14 +412,41 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
                       </span>
                     )}
                   </td>
-                  <td className="py-3" style={{ color: "hsl(var(--muted))" }}>
-                    {c.province}
-                  </td>
-                  <td className="num py-3" style={{ color: "hsl(var(--muted))" }}>
+                  <td style={{ color: "hsl(var(--muted))" }}>{c.province}</td>
+                  <td className="num" style={{ color: "hsl(var(--muted))" }}>
                     {c.localTimes.totalityStart}
                   </td>
-                  <td className="num py-3 text-right font-semibold">
+                  <td className="num text-right font-semibold">
                     {formatDuration(c.eclipse.totalitySeconds, locale)}
+                  </td>
+                  {/*
+                    Aquí no va barra, y es una decisión, no un olvido.
+
+                    Estas diez localidades van de 4 min 51 s a 4 min 18 s: una barra
+                    anclada al cero las deja a todas entre el 89 % y el 100 % y no
+                    distingue nada. Recortar el eje para que parezcan distintas es el
+                    engaño clásico de los gráficos de barras. Lo que sí responde la
+                    pregunta —cuánto pierdo bajando por la lista— es la diferencia,
+                    y ésa se puede dar exacta. En /horarios, donde la tabla baja
+                    hasta menos de dos minutos, la barra sí compara y allí se queda.
+                  */}
+                  <td className="num text-right" style={{ color: "hsl(var(--faint))" }}>
+                    {/*
+                      Una diferencia que redondea a cero se muestra como raya y no
+                      como «−0 s». No es cosmética: entre las dos primeras
+                      localidades hay décimas de segundo, y esta web declara que
+                      sus duraciones son fiables «dentro de unos segundos».
+                      Presentar una diferencia por debajo del segundo como si
+                      fuera un dato sería afirmar más precisión de la que tenemos.
+
+                      Se restan los valores **ya redondeados**, no los crudos, para
+                      que la tabla cuadre consigo misma: con los crudos, dos filas
+                      que muestran 4 min 51 s y 4 min 48 s podían dar una diferencia
+                      de 2 s, y quien hiciera la resta a mano vería un descuadre.
+                    */}
+                    {Math.round(longest) - Math.round(c.eclipse.totalitySeconds) === 0
+                      ? "—"
+                      : `−${Math.round(longest) - Math.round(c.eclipse.totalitySeconds)} s`}
                   </td>
                 </tr>
               ))}
@@ -486,12 +519,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       <Section title={t.home.faqTitle}>
         <div className="space-y-3">
           {faq.map((item) => (
-            <details
-              key={item.q}
-              className="card-interactive rounded-2xl border p-5"
-              style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
-            >
-              <summary className="cursor-pointer font-semibold">{item.q}</summary>
+            <details key={item.q} className="disclosure card-interactive surface rounded-2xl p-5">
+              <summary className="font-semibold">{item.q}</summary>
               <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted))" }}>
                 {item.a}
               </p>

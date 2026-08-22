@@ -41,12 +41,8 @@ function FaqList({ items }: { items: { q: string; a: string }[] }) {
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <details
-          key={item.q}
-          className="rounded-2xl border p-5"
-          style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
-        >
-          <summary className="cursor-pointer font-semibold">{item.q}</summary>
+        <details key={item.q} className="disclosure card-interactive surface rounded-2xl p-5">
+          <summary className="font-semibold">{item.q}</summary>
           <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted))" }}>
             {item.a}
           </p>

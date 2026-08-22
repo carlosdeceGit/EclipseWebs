@@ -688,6 +688,116 @@ table :where(td, th).num,
   }
 }
 
+/* ── Tablas de datos ────────────────────────────────────────────────────────
+   Las tablas son donde vive el activo de esta red y se veían como HTML sin
+   estilar: filas separadas por una línea y poco más. Lo que necesitan no es
+   adorno, es que la columna de cifras se lea como una columna.
+*/
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: calc(var(--header-h) + 0.5rem);
+  z-index: 1;
+  padding: 0.75rem 0.75rem;
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--faint));
+  background: hsl(var(--bg));
+  border-bottom: 1px solid hsl(var(--border-strong));
+}
+
+.data-table tbody td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* El realce de fila es lo que permite seguir una fila larga sin perder el
+   renglón, que es el fallo clásico de una tabla ancha en móvil. */
+.data-table tbody tr {
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.data-table tbody tr:hover {
+  background: hsl(var(--surface) / 0.7);
+}
+
+/* Toda celda numérica con cifras de ancho fijo: sin esto la columna baila y deja
+   de leerse como columna. */
+.data-table .num {
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+/* Fila de la ciudad del propio dominio: se marca con un filo de acento en vez de
+   con un fondo, que competiría con el realce del puntero. */
+.data-table tr[data-self="true"] td:first-child {
+  box-shadow: inset 2px 0 0 hsl(var(--accent));
+}
+
+/* ── Superficies ────────────────────────────────────────────────────────────*/
+
+/*
+  Tarjeta.
+
+  El degradado y el filo superior son casi imperceptibles a propósito: lo justo
+  para que la tarjeta parezca captar luz desde arriba y se despegue del fondo.
+  Un borde plano sobre un relleno plano es lo que hacía que todo se leyera al
+  mismo nivel.
+*/
+.surface {
+  background:
+    linear-gradient(hsl(var(--text) / 0.045), hsl(var(--text) / 0) 40%),
+    hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-sm);
+}
+
+/* Disclosure de las preguntas frecuentes: la flecha gira al abrir. Sin ninguna
+   señal, un `<details>` cerrado no parece que se pueda abrir. */
+.disclosure summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure summary::after {
+  content: "";
+  flex: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.4rem;
+  border-right: 2px solid hsl(var(--muted));
+  border-bottom: 2px solid hsl(var(--muted));
+  rotate: 45deg;
+  transition:
+    rotate var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.disclosure[open] summary::after {
+  rotate: -135deg;
+  border-color: hsl(var(--accent));
+}
+
 /* ── Prosa ──────────────────────────────────────────────────────────────────*/
 .prose-eclipse {
   line-height: 1.75;

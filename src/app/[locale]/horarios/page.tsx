@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection, AdSlot } from "@/components/AdSlot";
+import { DurationBar } from "@/components/DurationBar";
 import { EclipseTimeline } from "@/components/EclipseTimeline";
 import { Callout, Card, DataRow, Datum, PageHeader, Section } from "@/components/ui";
 import {
@@ -56,6 +57,10 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
   const name = cityName(city, locale);
   const duration = formatDuration(city.eclipse.totalitySeconds, locale);
   // Sin segundos para el titular: al segundo está en la tabla de debajo.
+  // Una sola lectura del registro: se usa para las filas y para fijar la escala
+  // de las barras, que la marca la localidad más larga de la tabla.
+  const allTotal = citiesByTotality();
+  const longest = allTotal[0]?.eclipse.totalitySeconds ?? 0;
   const startShort =
     toLocalTime(city.eclipse.totalityStart ?? city.eclipse.maximum, city.timeZone, false) ??
     city.localTimes.maximum;
@@ -190,35 +195,37 @@ export default async function TimingsPage({ params }: { params: Promise<{ locale
         }
       >
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[42rem] text-left text-sm">
+          <table className="data-table min-w-[48rem] text-sm">
             <thead>
-              <tr style={{ color: "hsl(var(--muted))" }}>
-                <th className="pb-3 font-medium">{t.data.locality}</th>
-                <th className="pb-3 font-medium">{t.data.province}</th>
-                <th className="pb-3 font-medium">C1</th>
-                <th className="pb-3 font-medium">C2</th>
-                <th className="pb-3 font-medium">C3</th>
-                <th className="pb-3 text-right font-medium">{t.data.duration}</th>
+              <tr>
+                <th>{t.data.locality}</th>
+                <th>{t.data.province}</th>
+                <th>C1</th>
+                <th>C2</th>
+                <th>C3</th>
+                <th className="text-right">{t.data.duration}</th>
+                <th className="w-[18%]" aria-hidden="true" />
               </tr>
             </thead>
             <tbody>
-              {citiesByTotality().map((c) => (
-                <tr key={c.slug} className="border-t" style={{ borderColor: "hsl(var(--border))" }}>
-                  <td className="py-3 font-semibold">
+              {allTotal.map((c) => (
+                <tr key={c.slug} data-self={c.slug === city.slug ? "true" : undefined}>
+                  <td className="font-semibold">
                     <Link href={localePath(locale, `/ciudades/${c.slug}`)} className="hover:underline">
                       {cityName(c, locale)}
                     </Link>
                   </td>
-                  <td className="py-3" style={{ color: "hsl(var(--muted))" }}>
-                    {c.province}
-                  </td>
-                  <td className="py-3 tabular-nums" style={{ color: "hsl(var(--muted))" }}>
+                  <td style={{ color: "hsl(var(--muted))" }}>{c.province}</td>
+                  <td className="num" style={{ color: "hsl(var(--muted))" }}>
                     {c.localTimes.partialStart}
                   </td>
-                  <td className="py-3 tabular-nums">{c.localTimes.totalityStart}</td>
-                  <td className="py-3 tabular-nums">{c.localTimes.totalityEnd}</td>
-                  <td className="py-3 text-right font-semibold tabular-nums">
+                  <td className="num">{c.localTimes.totalityStart}</td>
+                  <td className="num">{c.localTimes.totalityEnd}</td>
+                  <td className="num text-right font-semibold">
                     {formatDuration(c.eclipse.totalitySeconds, locale)}
+                  </td>
+                  <td>
+                    <DurationBar seconds={c.eclipse.totalitySeconds} max={longest} locale={locale} />
                   </td>
                 </tr>
               ))}

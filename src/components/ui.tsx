@@ -186,10 +186,7 @@ export function Card({
   interactive?: boolean;
 }) {
   return (
-    <div
-      className={`rounded-2xl border p-5 ${interactive ? "card-interactive" : ""} ${className}`}
-      style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
-    >
+    <div className={`surface rounded-2xl p-5 ${interactive ? "card-interactive" : ""} ${className}`}>
       {children}
     </div>
   );

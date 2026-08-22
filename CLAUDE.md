@@ -402,6 +402,20 @@ Decisiones que conviene no revertir:
   convertía en `relative` el `sticky` del header y el `fixed` de la barra inferior. Ni
   `:where()` lo evitaba. Es la trampa a recordar al escribir CSS global en este
   proyecto.
+- **Las tablas llevan `.data-table`**: cabecera pegajosa, cifras de ancho fijo en
+  las celdas numéricas y realce de fila al pasar el puntero. Una tabla ancha sin
+  realce de fila es donde más fácil se pierde el renglón.
+- **Barra de duración en `/horarios`, diferencia en el ranking de la portada.** No
+  es una inconsistencia: la tabla larga baja de 4 min 51 s a menos de dos minutos
+  y ahí una barra anclada al cero compara de verdad; las diez primeras localidades
+  van de 4 min 51 s a 4 min 18 s y sus barras salen todas entre el 89 % y el 100 %,
+  sin distinguir nada. Recortar el eje para que parezcan distintas es el engaño
+  clásico del gráfico de barras, así que en la portada va la diferencia en
+  segundos, que es exacta y responde la pregunta real: cuánto se pierde bajando
+  por la lista. **Esa diferencia se calcula restando los valores ya redondeados**,
+  no los crudos, para que la tabla cuadre si alguien hace la resta a mano; y si
+  redondea a cero se muestra una raya, porque declaramos precisión de segundos y
+  una diferencia de décimas no es un dato.
 - **El proxy propaga la ruta** en `x-eclipse-path`. Un layout de App Router no recibe la
   ruta, y sin ella el conmutador de idioma tenía que apuntar siempre a la home: cambiar
   a inglés desde una guía te sacaba de la guía.
