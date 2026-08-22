@@ -33,7 +33,16 @@ export default function proxy(request: NextRequest) {
     pathname === "/calendar.ics" ||
     pathname === "/blog/rss.xml";
 
-  if (isRootAsset || pathname.startsWith("/api/") || pathname === "/og") {
+  // El panel de moderación no tiene idioma ni tenant: modera una persona para
+  // los cuatro dominios. Si pasara por la reescritura acabaría en /es/admin, que
+  // no existe.
+  if (
+    isRootAsset ||
+    pathname.startsWith("/api/") ||
+    pathname === "/og" ||
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/")
+  ) {
     return NextResponse.next({ request: { headers } });
   }
 

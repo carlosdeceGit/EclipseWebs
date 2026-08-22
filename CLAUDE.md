@@ -215,6 +215,9 @@ src/
       supabase.ts          clientes, degradan a null sin variables
       listings.ts          directorio y clasificados
       events.ts            agenda de actos de la ciudad
+      moderation.ts        consultas del panel: lo pendiente y lo ya decidido
+    admin/
+      auth.ts              puerta del panel: contraseña, sesión firmada
   content/
     faq.ts                 FAQ bilingües
     articles/              guías largas bilingües, una por archivo
@@ -237,6 +240,7 @@ src/
     [locale]/visor/        el Visor 360º con URL propia
     [locale]/publicar/     alta pública: negocio, evento o anuncio de particular
     [locale]/directorio/   alojamiento, eventos y actividades de la ciudad
+    admin/                 panel de moderación, fuera de [locale] y con noindex
     calendar.ics           el eclipse como cita de calendario, por tenant
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
@@ -515,6 +519,47 @@ fuera. `CONSENT_VERSION` en `src/lib/consent.ts` invalida los consentimientos pr
 **súbela al añadir cualquier finalidad o proveedor nuevo**, porque un sí para AdSense no
 cubre añadir después otra red.
 
+### Base de datos y panel de moderación
+
+El proyecto de Supabase es **`eclipsewebs`** (organización Demiurgos, región
+`eu-west-3` / París). `supabase/schema.sql` es el esquema aplicado: cuatro tablas
+—`listings`, `events`, `agent_runs`, `agent_actions`— con RLS activo en todas.
+
+Dos detalles del esquema que no son cosméticos y conviene no revertir:
+
+- La función del trigger lleva `set search_path = ''`. Sin él, quien pueda crear
+  objetos en un esquema del `search_path` puede secuestrar a qué tabla resuelve
+  el código de la función.
+- Las políticas usan `(select auth.uid())` y no `auth.uid()` a secas. Envuelto en
+  un subselect se evalúa una vez por consulta; suelto, una vez por fila.
+
+`agent_runs` y `agent_actions` tienen RLS activo **y ninguna política**, a
+propósito: eso deniega todo salvo a la service role. El linter lo marca como
+aviso informativo y es el comportamiento correcto.
+
+El panel vive en **`/admin`**, fuera de `[locale]`: no tiene versión en inglés,
+no tiene tenant, no lleva el header de la web ni el banner de cookies, y sale del
+sitemap y de los `hreflang`. Modera una sola persona para los cuatro dominios, así
+que **no filtra por tenant**: obligar a entrar cuatro veces sería multiplicar el
+trabajo por cuatro sin ganar nada.
+
+Cómo está protegido, en orden de importancia:
+
+1. **Sin `ADMIN_PASSWORD` el panel devuelve 404.** No existe, en vez de enseñar un
+   formulario de login a quien pase por ahí.
+2. La sesión es una cookie `httpOnly`, `SameSite=Lax`, `path=/admin`, con la
+   caducidad firmada por HMAC de la contraseña. Una cookie con fecha futura y
+   firma inventada no entra.
+3. **Cada acción de escritura vuelve a comprobar la sesión.** Una acción de
+   servidor es un endpoint HTTP como cualquier otro: que la página que la dibuja
+   esté protegida no protege la acción.
+4. La contraseña se compara en tiempo constante sobre digests, así que ni el
+   contenido ni la longitud se filtran por el tiempo de respuesta.
+
+El nivel de pago (`tier`) se cambia **aparte** de aprobar. Es lo único del panel
+que mueve dinero: subir a destacado va después de cobrar, y mezclarlo con el
+visto bueno es el camino directo a regalarlo por descuido.
+
 ---
 
 ## 7. El blog
@@ -784,8 +829,9 @@ Cosas que conviene no romper:
 - Autenticación para que los negocios gestionen su propia ficha. Hoy el alta desde
   `/publicar` es anónima y se modera a mano, que es lo correcto para empezar pero no
   escala si el directorio se llena.
-- Panel de moderación. Las altas de `/publicar` entran como `pending` y ahora mismo
-  se aprueban desde el propio Supabase; con volumen hará falta una pantalla.
+- Que el panel avise. Hoy hay que entrar a `/admin` para ver si hay algo esperando;
+  un correo diario con el recuento pendiente evitaría que una ficha se quede una
+  semana sin publicar.
 - Ampliar el registro de 35 a los 115 municipios (el agente auditor propone los que faltan).
 - Comprar los dominios recomendados de §2 antes de que los cojan.
 - Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§9).

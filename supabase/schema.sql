@@ -50,8 +50,13 @@ create index listings_public_idx
 create index listings_owner_idx on listings (owner);
 create index listings_expiry_idx on listings (expires_at) where status = 'approved';
 
+-- `set search_path = ''` no es cosmético: sin él, quien pueda crear objetos en un
+-- esquema del search_path puede secuestrar a qué tabla o función resuelve este
+-- código. Es lo que marca el linter de Supabase y lo que se aplicó al proyecto.
 create or replace function listings_before_write() returns trigger
-language plpgsql as $$
+language plpgsql
+set search_path = ''
+as $$
 begin
   new.updated_at := now();
   new.tier_rank := case new.tier
@@ -84,11 +89,13 @@ create policy "anuncios aprobados son públicos" on listings
 
 -- Un usuario registrado ve y edita los suyos, en cualquier estado.
 create policy "el dueño ve los suyos" on listings
-  for select to authenticated using (owner = auth.uid());
+  for select to authenticated using (owner = (select auth.uid()));
 
 create policy "el dueño crea los suyos" on listings
   for insert to authenticated with check (
-    owner = auth.uid()
+    -- El subselect hace que `auth.uid()` se evalúe una vez por consulta y no una
+    -- vez por fila, que es lo que recomienda el linter de rendimiento.
+    owner = (select auth.uid())
     -- Nadie se autoasigna un nivel de pago ni se autoaprueba: eso solo lo hace el
     -- backend con service role tras confirmar el cobro.
     and status = 'pending'
@@ -97,8 +104,8 @@ create policy "el dueño crea los suyos" on listings
 
 create policy "el dueño edita los suyos" on listings
   for update to authenticated
-  using (owner = auth.uid())
-  with check (owner = auth.uid() and tier = 'free');
+  using (owner = (select auth.uid()))
+  with check (owner = (select auth.uid()) and tier = 'free');
 
 -- ---------------------------------------------------------------------------
 -- Eventos: los alimenta el agente de eventos y la gente desde el formulario
