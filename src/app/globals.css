@@ -4,49 +4,818 @@
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/*
+  Sistema de diseño.
+
+  Un único sitio donde viven color, tipografía, espaciado y movimiento. Los
+  componentes no inventan valores: los consumen. Eso es lo que permite que las
+  cuatro webs de la red compartan carácter cambiando una sola variable de acento.
+*/
 :root {
   /* El acento lo fija cada tenant desde el layout con una variable inline. */
   --accent: 28 96% 56%;
+
+  /* Superficies, de la más honda a la más alta. Antes solo había dos: con una
+     sola superficie no se puede construir jerarquía sin recurrir a bordes. */
   --bg: 224 44% 6%;
   --surface: 224 34% 11%;
+  --surface-2: 224 30% 14%;
+  --surface-3: 224 28% 18%;
+
   --text: 210 24% 96%;
   --muted: 214 14% 68%;
+  --faint: 214 12% 52%;
   --border: 218 22% 22%;
+  --border-strong: 218 20% 32%;
+
+  /* Semánticos. El rojo de peligro es el de la guía de seguridad y no se usa
+     para nada decorativo. */
+  --danger: 0 84% 66%;
+  --success: 152 62% 52%;
+
+  /* Tipografía fluida: interpola con el viewport en vez de saltar en cada
+     breakpoint, que es lo que hace que un titular quede raro justo en el ancho
+     de una tablet. */
+  --step--1: clamp(0.8rem, 0.76rem + 0.2vw, 0.875rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --step-1: clamp(1.125rem, 1.05rem + 0.38vw, 1.375rem);
+  --step-2: clamp(1.375rem, 1.24rem + 0.68vw, 1.875rem);
+  --step-3: clamp(1.75rem, 1.5rem + 1.25vw, 2.5rem);
+  --step-4: clamp(2.25rem, 1.75rem + 2.5vw, 3.75rem);
+  --step-5: clamp(2.75rem, 1.9rem + 4.2vw, 5.5rem);
+
+  /* Movimiento. Una sola curva para todo lo que entra y sale: la interfaz se
+     siente de una pieza cuando todos los elementos se mueven igual. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.28, 0.64, 1);
+  --dur-fast: 140ms;
+  --dur: 240ms;
+  --dur-slow: 520ms;
+
+  /* Tonos derivados del acento. Se mezclan en oklab y no en sRGB a propósito:
+     en sRGB un naranja mezclado con el fondo oscuro se va a marrón sucio, que es
+     justo lo que no queremos en una marca cuyo color es el Sol. Derivarlos aquí
+     evita además declarar tres tonos por cada tenant. */
+  --accent-dim: color-mix(in oklab, hsl(var(--accent)) 55%, hsl(var(--bg)));
+  --accent-ink: color-mix(in oklab, hsl(var(--accent)) 20%, white);
+  --accent-wash: color-mix(in oklab, hsl(var(--accent)) 12%, hsl(var(--surface)));
+
+  /* Color de texto que se lee sobre el acento. El acento es claro y saturado en
+     los cuatro tenants, así que la tinta siempre es el fondo profundo. */
+  --on-accent: 224 44% 8%;
+
+  /* Profundidad. Sin sombras todo vive en el mismo plano y la interfaz se lee
+     como una hoja de cálculo: no hay nada que diga qué está encima de qué. */
+  --shadow-sm: 0 1px 2px hsl(224 44% 2% / 0.4);
+  --shadow: 0 0.5rem 1.5rem hsl(224 44% 2% / 0.45);
+  --shadow-lg: 0 1.5rem 3.5rem hsl(224 44% 2% / 0.6);
+
+  --radius: 1rem;
+  --radius-lg: 1.5rem;
+
+  /* Alto real del header pegajoso, para que `scroll-margin-top` no esconda los
+     anclas debajo de él. Lo actualiza el propio header al contraerse. */
+  --header-h: 4.25rem;
 }
 
 html {
-  scroll-behavior: smooth;
+  /* Cualquier ancla se detiene por debajo del header, no debajo de él. */
+  scroll-padding-top: calc(var(--header-h) + 1rem);
+}
+
+/* El desplazamiento suave se pide, no se impone: para algunas personas es
+   justo lo que provoca el mareo. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 body {
   background: hsl(var(--bg));
   color: hsl(var(--text));
   font-family: var(--font-sans);
+  font-size: var(--step-0);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Fondo de cielo con el disco del eclipse, puramente decorativo. */
+/* Titulares: sin viudas y con el tracking cerrado que pide un tamaño grande. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* Foco visible y consistente en toda la web. Sin esto cada navegador dibuja el
+   suyo y en fondo oscuro varios son ilegibles. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid hsl(var(--accent));
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* ── Fondo ──────────────────────────────────────────────────────────────────
+   Cielo con la corona del eclipse. Es decorativo, así que vive en pseudo-
+   elementos con `pointer-events: none` y no participa del flujo.
+*/
 .sky {
+  /*
+    Aísla el cuerpo como contexto de apilamiento para que el campo de estrellas
+    pueda vivir por detrás del contenido con `z-index: -1`.
+
+    La alternativa —subir todo el contenido a una capa superior— se probó y era
+    una trampa: Tailwind v4 emite sus utilidades dentro de `@layer utilities`, y
+    una regla sin capa gana a cualquier regla en capa **por especificidad que
+    tenga la otra**. Una regla suelta que fijara `position: relative` en los
+    hijos del cuerpo convertía en `relative` el `sticky` del header y el `fixed`
+    de la barra inferior, y ni `:where()` lo evitaba. Con `isolation` no hace
+    falta tocar a los hijos.
+  */
+  isolation: isolate;
   background:
     radial-gradient(60rem 40rem at 50% -10%, hsl(var(--accent) / 0.18), transparent 60%),
     radial-gradient(40rem 30rem at 85% 10%, hsl(var(--accent) / 0.08), transparent 65%),
     hsl(var(--bg));
 }
 
+/* Campo de estrellas en dos capas, dibujado con gradientes: sin imágenes, sin
+   peticiones y sin una sola línea de JavaScript. */
+.sky::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background-image:
+    radial-gradient(1px 1px at 12% 18%, hsl(var(--text) / 0.55), transparent),
+    radial-gradient(1px 1px at 28% 62%, hsl(var(--text) / 0.4), transparent),
+    radial-gradient(1.5px 1.5px at 47% 28%, hsl(var(--text) / 0.5), transparent),
+    radial-gradient(1px 1px at 64% 74%, hsl(var(--text) / 0.35), transparent),
+    radial-gradient(1px 1px at 79% 22%, hsl(var(--text) / 0.5), transparent),
+    radial-gradient(1.5px 1.5px at 88% 58%, hsl(var(--text) / 0.35), transparent),
+    radial-gradient(1px 1px at 8% 84%, hsl(var(--text) / 0.4), transparent),
+    radial-gradient(1px 1px at 55% 92%, hsl(var(--text) / 0.3), transparent);
+  animation: twinkle 7s var(--ease) infinite alternate;
+}
+
+
+
+@keyframes twinkle {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+/* ── Movimiento ─────────────────────────────────────────────────────────────
+   Todo lo que se mueve se declara aquí y todo respeta `prefers-reduced-motion`.
+*/
+
+/* Entrada por scroll con animaciones dirigidas por scroll: cero JavaScript, cero
+   observadores y cero coste en el hilo principal. Donde no hay soporte —Safari
+   y Firefox a día de hoy— el elemento simplemente ya está visible, que es
+   exactamente la degradación que queremos. */
+@supports (animation-timeline: view()) {
+  .reveal {
+    animation: reveal-in linear both;
+    animation-timeline: view();
+    animation-range: entry 0% cover 22%;
+  }
+}
+
+@keyframes reveal-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Entrada al montar, para lo que aparece sin mediar scroll (resultados del
+   localizador, paneles que se abren). */
+.enter {
+  animation: enter var(--dur-slow) var(--ease) both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.99);
+  }
+}
+
+/* Barra de progreso de lectura, también dirigida por scroll. */
+.read-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: 0 50%;
+  background: linear-gradient(90deg, hsl(var(--accent)), hsl(var(--accent) / 0.35));
+  z-index: 60;
+  scale: 0 1;
+}
+
+@supports (animation-timeline: scroll()) {
+  .read-progress {
+    animation: progress linear both;
+    animation-timeline: scroll(root block);
+  }
+}
+
+@keyframes progress {
+  to {
+    scale: 1 1;
+  }
+}
+
+/* Halo del disco solar del logotipo y de los acentos vivos. */
+@keyframes corona {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--accent) / 0.55), 0 0 18px hsl(var(--accent) / 0.6);
+  }
+  50% {
+    box-shadow: 0 0 0 6px hsl(var(--accent) / 0), 0 0 26px hsl(var(--accent) / 0.85);
+  }
+}
+
+.corona {
+  animation: corona 3.6s var(--ease) infinite;
+}
+
+@keyframes shimmer {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+/* Marcador de carga: en vez de un hueco vacío, la forma del contenido que viene. */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--surface-2)) 25%,
+    hsl(var(--surface-3)) 37%,
+    hsl(var(--surface-2)) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 0.5rem;
+}
+
+/*
+  Quien pide menos movimiento recibe menos movimiento. No es una cortesía: para
+  algunas personas el parallax y los desplazamientos provocan mareo real.
+  Se apagan las animaciones decorativas y se conservan las transiciones de color,
+  que no desplazan nada.
+*/
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .sky::before,
+  .corona,
+  .skeleton,
+  .reveal,
+  .enter,
+  .read-progress {
+    animation: none !important;
+  }
+
+  .reveal,
+  .enter {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .read-progress {
+    display: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────────────
+   Una imagen a sangre por detrás, el contenido por delante y un velo entre
+   medias. El velo no es decorativo: sobre una foto de cielo el texto blanco
+   deja de leerse en cuanto sale el Sol, y ninguna imagen generada garantiza
+   dónde va a quedar la zona clara.
+
+   Está construido para verse bien **con imagen y sin ella**. Hoy no hay imagen,
+   y ese estado no puede ser el estado roto.
+*/
+.hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: -20;
+  background-size: cover;
+  background-position: var(--hero-focal, 50% 40%);
+}
+
+/*
+  Doble velo: uno vertical que funde con la página por abajo y otro horizontal
+  que oscurece el lado del texto. En móvil solo el vertical, porque el texto
+  ocupa todo el ancho y un degradado lateral solo quitaría contraste.
+*/
+.hero-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -10;
+  background:
+    linear-gradient(
+      to bottom,
+      hsl(var(--bg) / 0.72) 0%,
+      hsl(var(--bg) / 0.62) 45%,
+      hsl(var(--bg) / 0.92) 82%,
+      hsl(var(--bg)) 100%
+    );
+}
+
+@media (min-width: 64rem) {
+  .hero-scrim {
+    background:
+      linear-gradient(to right, hsl(var(--bg) / 0.94) 0%, hsl(var(--bg) / 0.7) 42%, hsl(var(--bg) / 0.15) 78%),
+      linear-gradient(to bottom, hsl(var(--bg) / 0.55) 0%, hsl(var(--bg) / 0.25) 40%, hsl(var(--bg) / 0.9) 88%, hsl(var(--bg)) 100%);
+  }
+}
+
+/* Barra de datos: una superficie elevada con separadores. Las tres cifras
+   sueltas sobre el fondo flotaban sin pertenecer a nada. */
+.hero-stats {
+  display: grid;
+  gap: 1px;
+  background: hsl(var(--border));
+  border: 1px solid hsl(var(--border));
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .hero-stats > * {
+    backdrop-filter: blur(12px);
+  }
+}
+
+.hero-stats > * {
+  background: hsl(var(--surface) / 0.88);
+  padding: 1.25rem 1.5rem;
+}
+
+@media (min-width: 40rem) {
+  .hero-stats {
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+}
+
+/* ── El dato como protagonista ───────────────────────────────────────────────
+   El activo diferencial de esta red no es un texto: es una cifra calculada que
+   nadie más tiene para cualquier coordenada. Merece ser el objeto más grande de
+   la página, no una línea más de una tabla.
+*/
+.datum {
+  font-size: var(--step-4);
+  font-weight: 800;
+  line-height: 0.88;
+  /* Un valor como «4 min 48 s» no debe partirse: al hacerlo desalinea la nota
+     de debajo respecto a las columnas vecinas y deja de leerse como una cifra. */
+  text-wrap: nowrap;
+  /* Tracking negativo solo por encima de ~28 px. En cuerpo de texto perjudica. */
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: hsl(var(--accent));
+  /* Corona, no resplandor barato: un halo ancho y muy tenue. */
+  text-shadow: 0 0 3.5rem hsl(var(--accent) / 0.35);
+}
+
+.datum .unit {
+  font-size: 0.36em;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: hsl(var(--muted));
+}
+
+.datum-label {
+  font-size: var(--step--1);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted));
+}
+
+/* Toda cifra que se compare en vertical va con cifras de ancho fijo. Sin esto,
+   una columna de horas de contacto baila y deja de leerse como una columna. */
+table :where(td, th).num,
+.tabular {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────────
+   Isla flotante que se contrae al bajar. El estado por defecto es el estado
+   terminado y legible: la animación es una capa encima, de modo que donde no
+   hay animaciones dirigidas por scroll —Firefox hoy— el header se ve bien,
+   simplemente no se encoge.
+*/
+.header-scrim::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(hsl(var(--bg)) 35%, hsl(var(--bg) / 0));
+  z-index: -1;
+}
+
+.header-island {
+  backdrop-filter: blur(16px) saturate(140%);
+  /* Respaldo opaco obligatorio: `backdrop-filter` falla en algunos WebView y
+     un header translúcido sin desenfoque deja el texto ilegible sobre la web. */
+  background: hsl(var(--bg) / 0.92);
+  border: 1px solid hsl(var(--border));
+  transition:
+    max-width var(--dur) var(--ease),
+    border-radius var(--dur) var(--ease),
+    background var(--dur) var(--ease);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .header-island {
+    background: hsl(var(--bg) / 0.72);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .header-island {
+      animation: header-shrink linear both;
+      animation-timeline: scroll(root block);
+      /* Se contrae en los primeros 160 px de recorrido y ahí se queda. */
+      animation-range: 0 160px;
+    }
+  }
+}
+
+@keyframes header-shrink {
+  to {
+    /* Lo justo para que quepan marca, las tres herramientas, el idioma y los dos
+       botones sin que ninguno parta en dos líneas. Más estrecho quedaba más
+       bonito en una maqueta y se solapaba en cuanto había contenido real. */
+    max-width: 58rem;
+    border-radius: 999px;
+    background: hsl(var(--surface) / 0.78);
+    box-shadow: 0 0.5rem 2rem hsl(224 44% 2% / 0.55);
+    border-color: hsl(var(--border-strong));
+  }
+}
+
+/* Enlace de navegación con subrayado que crece desde el centro. Se anima
+   `transform`, nunca `width`: así compone en la GPU. */
+.nav-link {
+  position: relative;
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.35rem;
+  height: 2px;
+  border-radius: 2px;
+  background: hsl(var(--accent));
+  transform: scaleX(0);
+  transition: transform var(--dur) var(--ease);
+}
+
+.nav-link:hover::after,
+.nav-link:focus-visible::after,
+.nav-link[aria-current="page"]::after {
+  transform: scaleX(1);
+}
+
+/* ── Menú a pantalla completa ───────────────────────────────────────────────
+   Usa la API de `popover`, que es HTML puro: capa superior, cierre con Escape y
+   cierre al pulsar fuera, sin una línea de JavaScript ni estado de React que
+   mantener. Donde no hay soporte el botón no abre nada, así que el menú lleva
+   además sus enlaces en el pie: nadie se queda sin poder navegar.
+*/
+.site-menu {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: 100%;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: hsl(var(--bg) / 0.97);
+  color: hsl(var(--text));
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .site-menu {
+    background: hsl(var(--bg) / 0.94);
+    backdrop-filter: blur(24px) saturate(140%);
+  }
+}
+
+.site-menu::backdrop {
+  background: hsl(224 44% 2% / 0.6);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-menu {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity var(--dur) var(--ease),
+      translate var(--dur) var(--ease),
+      overlay var(--dur) allow-discrete,
+      display var(--dur) allow-discrete;
+  }
+
+  .site-menu:not(:popover-open) {
+    opacity: 0;
+    translate: 0 -1rem;
+  }
+
+  @starting-style {
+    .site-menu:popover-open {
+      opacity: 0;
+      translate: 0 -1rem;
+    }
+  }
+}
+
+/* ── Barra inferior de móvil ────────────────────────────────────────────────
+   Los destinos que más se usan viven al alcance del pulgar. No se oculta al
+   hacer scroll: en una web que se consulta de pie y en la calle, un menú que
+   desaparece obliga a un gesto extra justo cuando menos apetece.
+*/
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  background: hsl(var(--bg) / 0.94);
+  border-top: 1px solid hsl(var(--border));
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .bottom-nav {
+    background: hsl(var(--bg) / 0.8);
+    backdrop-filter: blur(18px) saturate(140%);
+  }
+}
+
+.bottom-nav a,
+.bottom-nav button {
+  transition: color var(--dur-fast) var(--ease);
+}
+
+/* ── Transiciones entre páginas ─────────────────────────────────────────────
+   Un fundido corto entre documentos. Donde no hay soporte la navegación es la
+   de siempre, así que no hay nada que degradar.
+*/
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+}
+
+::view-transition-old(root) {
+  animation: vt-out 120ms var(--ease) both;
+}
+
+::view-transition-new(root) {
+  animation: vt-in 200ms var(--ease) both;
+}
+
+@keyframes vt-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vt-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ── Superficies interactivas ───────────────────────────────────────────────*/
+
+/* Tarjeta que reacciona: sube un par de píxeles y **aumenta el contraste**. No
+   se escala nunca — escalar una tarjeta entera reencuadra el texto por
+   subpíxel y se ve sucio. */
+.card-interactive {
+  transition:
+    transform var(--dur) var(--ease),
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+}
+
+.card-interactive:hover,
+.card-interactive:focus-within {
+  transform: translateY(-2px);
+  border-color: hsl(var(--accent) / 0.55);
+  background: hsl(var(--surface-2));
+  box-shadow: 0 0.75rem 2rem hsl(224 44% 2% / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-interactive:hover,
+  .card-interactive:focus-within {
+    transform: none;
+  }
+}
+
+/* Objetivos táctiles: 44 px es el mínimo de las guías de Apple y de WCAG 2.2
+   para cualquier control que se pulse con el dedo. */
+.tap {
+  min-height: 2.75rem;
+  min-width: 2.75rem;
+}
+
+/*
+  Impresión.
+
+  Lo que entra por scroll no ha entrado nunca en una hoja de papel: sin esto, una
+  página impresa sale con la mitad de las secciones en blanco. Y la barra inferior
+  y el progreso de lectura no pintan nada en papel.
+*/
+@media print {
+  .reveal,
+  .enter {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .read-progress,
+  .bottom-nav,
+  .header-scrim::before {
+    display: none !important;
+  }
+
+  .sky::before {
+    display: none !important;
+  }
+}
+
+/* ── Tablas de datos ────────────────────────────────────────────────────────
+   Las tablas son donde vive el activo de esta red y se veían como HTML sin
+   estilar: filas separadas por una línea y poco más. Lo que necesitan no es
+   adorno, es que la columna de cifras se lea como una columna.
+*/
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  text-align: left;
+}
+
+.data-table thead th {
+  position: sticky;
+  top: calc(var(--header-h) + 0.5rem);
+  z-index: 1;
+  padding: 0.75rem 0.75rem;
+  font-size: var(--step--1);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: hsl(var(--faint));
+  background: hsl(var(--bg));
+  border-bottom: 1px solid hsl(var(--border-strong));
+}
+
+.data-table tbody td {
+  padding: 0.85rem 0.75rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* El realce de fila es lo que permite seguir una fila larga sin perder el
+   renglón, que es el fallo clásico de una tabla ancha en móvil. */
+.data-table tbody tr {
+  transition: background var(--dur-fast) var(--ease);
+}
+
+.data-table tbody tr:hover {
+  background: hsl(var(--surface) / 0.7);
+}
+
+/* Toda celda numérica con cifras de ancho fijo: sin esto la columna baila y deja
+   de leerse como columna. */
+.data-table .num {
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+
+/* Fila de la ciudad del propio dominio: se marca con un filo de acento en vez de
+   con un fondo, que competiría con el realce del puntero. */
+.data-table tr[data-self="true"] td:first-child {
+  box-shadow: inset 2px 0 0 hsl(var(--accent));
+}
+
+/* ── Superficies ────────────────────────────────────────────────────────────*/
+
+/*
+  Tarjeta.
+
+  El degradado y el filo superior son casi imperceptibles a propósito: lo justo
+  para que la tarjeta parezca captar luz desde arriba y se despegue del fondo.
+  Un borde plano sobre un relleno plano es lo que hacía que todo se leyera al
+  mismo nivel.
+*/
+.surface {
+  background:
+    linear-gradient(hsl(var(--text) / 0.045), hsl(var(--text) / 0) 40%),
+    hsl(var(--surface));
+  border: 1px solid hsl(var(--border));
+  box-shadow: var(--shadow-sm);
+}
+
+/* Disclosure de las preguntas frecuentes: la flecha gira al abrir. Sin ninguna
+   señal, un `<details>` cerrado no parece que se pueda abrir. */
+.disclosure summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure summary::after {
+  content: "";
+  flex: none;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.4rem;
+  border-right: 2px solid hsl(var(--muted));
+  border-bottom: 2px solid hsl(var(--muted));
+  rotate: 45deg;
+  transition:
+    rotate var(--dur) var(--ease),
+    border-color var(--dur) var(--ease);
+}
+
+.disclosure[open] summary::after {
+  rotate: -135deg;
+  border-color: hsl(var(--accent));
+}
+
+/* ── Prosa ──────────────────────────────────────────────────────────────────*/
 .prose-eclipse {
   line-height: 1.75;
+  font-size: var(--step-0);
 }
 .prose-eclipse h2 {
-  font-size: 1.5rem;
+  font-size: var(--step-2);
   font-weight: 700;
   margin-top: 2.5rem;
   margin-bottom: 0.75rem;
+  scroll-margin-top: calc(var(--header-h) + 1.5rem);
 }
 .prose-eclipse h3 {
-  font-size: 1.15rem;
+  font-size: var(--step-1);
   font-weight: 600;
   margin-top: 1.75rem;
   margin-bottom: 0.5rem;
+  scroll-margin-top: calc(var(--header-h) + 1.5rem);
 }
 .prose-eclipse p {
   margin-bottom: 1rem;
@@ -67,10 +836,18 @@ body {
 .prose-eclipse li {
   margin-bottom: 0.375rem;
 }
+.prose-eclipse li::marker {
+  color: hsl(var(--accent) / 0.7);
+}
 .prose-eclipse a {
   color: hsl(var(--accent));
   text-decoration: underline;
   text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  transition: text-decoration-thickness var(--dur-fast) var(--ease);
+}
+.prose-eclipse a:hover {
+  text-decoration-thickness: 2px;
 }
 .prose-eclipse strong {
   color: hsl(var(--text));

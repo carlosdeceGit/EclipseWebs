@@ -18,6 +18,27 @@ export interface Tenant {
   accentHsl: string;
   /** ID de AdSense propio del dominio, si se gestiona por separado. */
   adsenseClientId?: string;
+  /**
+   * Imagen de fondo del hero.
+   *
+   * Es opcional y el hero está diseñado para verse bien sin ella: mientras no
+   * exista se dibuja una corona en SVG. Cuando haya archivo, se pone aquí y ya.
+   *
+   * `credit` es obligatorio en cuanto la imagen no sea un dibujo propio. La regla
+   * 9 del proyecto dice que no publicamos imágenes de las que no tengamos los
+   * derechos, y una imagen generada tiene que decir que lo es: el eclipse aún no
+   * ha ocurrido, así que cualquier imagen realista es necesariamente inventada y
+   * presentarla como documento sería exactamente el tipo de cosa que esta red no
+   * hace.
+   *
+   * `focal` es el `background-position`: el punto de la imagen que nunca se debe
+   * recortar. En un cielo con el Sol arriba a la derecha, algo como "70% 30%".
+   */
+  hero?: {
+    src: string;
+    credit: string;
+    focal?: string;
+  };
 }
 
 /**
@@ -36,6 +57,12 @@ export const TENANTS: Tenant[] = [
     citySlug: "ceuta",
     brand: "Ceuta Eclipse",
     accentHsl: "28 96% 56%",
+    hero: {
+      src: "/hero/ceuta.webp",
+      credit:
+        "Ilustración generada con IA a partir del paisaje real de Ceuta y el Estrecho. El eclipse del 2 de agosto de 2027 todavía no ha ocurrido: no es una fotografía.",
+      focal: "52% 38%",
+    },
   },
   {
     // Canónico el .es, que es el dominio en propiedad. El .com se deja declarado
@@ -80,6 +107,19 @@ const HUB_TEMPLATE: Omit<Tenant, "domain" | "aliases"> = {
   citySlug: "ceuta",
   brand: "Eclipse 2027",
   accentHsl: "28 96% 56%",
+  /*
+    El hub habla de Ceuta —es su `citySlug`—, así que lleva su misma imagen. No es
+    un detalle estético: los despliegues de previsualización de Vercel salen por un
+    host `*.vercel.app`, que cae aquí. Sin esta línea, cualquiera que revise un
+    cambio del hero en una preview vería el estado sin imagen y concluiría que no
+    funciona.
+  */
+  hero: {
+    src: "/hero/ceuta.webp",
+    credit:
+      "Ilustración generada con IA a partir del paisaje real de Ceuta y el Estrecho. El eclipse del 2 de agosto de 2027 todavía no ha ocurrido: no es una fotografía.",
+    focal: "52% 38%",
+  },
 };
 
 /** Tenant de reserva para cuando no hay Host que valga (renderizado sin petición). */

@@ -164,7 +164,7 @@ export function CookieConsent({
                 type="button"
                 onClick={() => decide("granted")}
                 className="rounded-lg px-4 py-2.5 text-sm font-semibold"
-                style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
               >
                 {t.accept}
               </button>
@@ -234,7 +234,7 @@ export function CookieConsent({
                 type="button"
                 onClick={() => decide(draft)}
                 className="rounded-lg px-4 py-2.5 text-sm font-semibold"
-                style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+                style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
               >
                 {t.save}
               </button>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection } from "@/components/AdSlot";
 import { ListingCard } from "@/components/ListingCard";
-import { Callout, Card, Section } from "@/components/ui";
+import { Callout, Card, PageHeader, Section } from "@/components/ui";
 import { CLASSIFIED_CATEGORIES, getListings } from "@/lib/db/listings";
 import { buildMetadata } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -56,14 +56,15 @@ export default async function ClassifiedsPage({
 
   return (
     <>
-      <Section
+      <PageHeader
         title={locale === "es" ? `Clasificados del eclipse en ${name}` : `Eclipse classifieds in ${name}`}
         lead={
           locale === "es"
             ? "Tablón entre particulares para los días del eclipse. Publicar es gratis; revisamos todos los anuncios antes de que aparezcan."
             : "A peer-to-peer board for the eclipse days. Posting is free; every ad is reviewed before it appears."
         }
-      >
+      />
+      <Section>
         <div className="mb-6 flex flex-wrap items-center gap-2">
           <Link
             href={localePath(locale, "/clasificados")}
@@ -91,9 +92,9 @@ export default async function ClassifiedsPage({
             </Link>
           ))}
           <Link
-            href={localePath(locale, "/clasificados/nuevo")}
+            href={localePath(locale, "/publicar") + "?tipo=particular"}
             className="ml-auto rounded-lg px-4 py-2 text-sm font-semibold"
-            style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
           >
             {locale === "es" ? "Publicar anuncio" : "Post an ad"}
           </Link>
@@ -116,9 +117,9 @@ export default async function ClassifiedsPage({
                 : "Be the first. It works especially well for what no booking site covers: a spare room in your home for those days, seats in your car from your city, spare certified glasses, or somewhere to park a motorhome."}
             </p>
             <Link
-              href={localePath(locale, "/clasificados/nuevo")}
+              href={localePath(locale, "/publicar") + "?tipo=particular"}
               className="mt-4 inline-block rounded-lg px-4 py-2 text-sm font-semibold"
-              style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+              style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
             >
               {locale === "es" ? "Publicar gratis" : "Post for free"}
             </Link>

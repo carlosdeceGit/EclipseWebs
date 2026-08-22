@@ -93,22 +93,23 @@ export function renderBlock(
     case "table":
       return (
         <div key={i} className="my-6 overflow-x-auto">
-          <table className="w-full text-left text-sm">
+          <table className="data-table text-sm">
             <thead>
-              <tr style={{ color: "hsl(var(--muted))" }}>
+              <tr>
                 {block.head.map((h) => (
-                  <th key={h} className="pb-2 font-medium">
-                    {h}
-                  </th>
+                  <th key={h}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {block.rows.map((row, r) => (
-                <tr key={r} className="border-t" style={{ borderColor: "hsl(var(--border))" }}>
+                <tr key={r}>
                   {row.map((cell, c) => (
-                    <td key={c} className="py-2">
-                      {cell}
+                    // Una celda que empieza por dígito es una cifra: cifras de
+                    // ancho fijo y sin partir. Las tablas de las guías llevan
+                    // duraciones y horas en columnas que hay que poder comparar.
+                    <td key={c} className={/^[\d−+-]/.test(cell) ? "num" : undefined}>
+                      {inline(cell)}
                     </td>
                   ))}
                 </tr>
@@ -127,12 +128,8 @@ export function renderBlock(
       return (
         <div key={i} className="my-6 space-y-3">
           {block.items.map((item) => (
-            <details
-              key={item.q}
-              className="rounded-2xl border p-5"
-              style={{ borderColor: "hsl(var(--border))", background: "hsl(var(--surface))" }}
-            >
-              <summary className="cursor-pointer font-semibold">{item.q}</summary>
+            <details key={item.q} className="disclosure surface rounded-2xl p-5">
+              <summary className="font-semibold">{item.q}</summary>
               <p className="mt-2 text-sm" style={{ color: "hsl(var(--muted))" }}>
                 {inline(item.a)}
               </p>

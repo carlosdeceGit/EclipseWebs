@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdSection, AdSlot } from "@/components/AdSlot";
-import { Callout, Card, DataRow, Section } from "@/components/ui";
+import { Callout, Card, DataRow, PageHeader, Section } from "@/components/ui";
 import { CITIES, getCity, cityName, formatDuration, formatObscuration, provinceName } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, cityGraph, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
@@ -77,7 +77,7 @@ export default async function CityPage({
         )}
       />
 
-      <Section
+      <PageHeader
         title={locale === "es" ? `El eclipse en ${name}` : `The eclipse in ${name}`}
         lead={
           city.eclipse.isTotal
@@ -88,7 +88,8 @@ export default async function CityPage({
               ? `Desde ${name} (${provinceName(city, locale)}) el eclipse del 2 de agosto de 2027 se verá parcial, no total. ${city.hook.es}`
               : `From ${name} (${provinceName(city, locale)}) the 2 August 2027 eclipse is partial, not total. ${city.hook.en}`
         }
-      >
+      />
+      <Section>
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <dl>

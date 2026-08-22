@@ -198,6 +198,7 @@ src/
   i18n/
     config.ts              locales, prefijos, helpers de ruta
     dictionary.ts          cadenas de interfaz es/en
+    navigation.ts          taxonomía de navegación: los cuatro grupos
   lib/
     tenants.ts             dominio → ciudad, marca y color
     tenant-context.ts      lectura del tenant/idioma en la petición
@@ -213,6 +214,10 @@ src/
     db/
       supabase.ts          clientes, degradan a null sin variables
       listings.ts          directorio y clasificados
+      events.ts            agenda de actos de la ciudad
+      moderation.ts        consultas del panel: lo pendiente y lo ya decidido
+    admin/
+      auth.ts              puerta del panel: contraseña, sesión firmada
   content/
     faq.ts                 FAQ bilingües
     articles/              guías largas bilingües, una por archivo
@@ -220,12 +225,23 @@ src/
     blog/                  posts del blog, agrupados por ciudad
     local/                 conocimiento local por ciudad: miradores, accesos, clima
   components/
+    ui.tsx                 primitivas: PageHeader, Section, Datum, Card, Callout…
+    SiteChrome.tsx         header isla, menú a pantalla completa, barra inferior, pie
     Blocks.tsx             renderizador de bloques, compartido por guías y blog
+    EclipseTimeline.tsx    los cinco contactos dibujados a escala
+    ViewerPromo.tsx        el Visor 360º en la portada, con su escena del cielo
+    EventCard.tsx          un acto de la agenda
+    HomeLocator.tsx        el localizador embebido en la portada
     art/                   ilustraciones SVG propias (ver §7)
   app/
     [locale]/              todas las páginas
     [locale]/blog/         índice del blog y página de cada post
     [locale]/localizador/  localizador y visor AR de cámara (cliente)
+    [locale]/visor/        el Visor 360º con URL propia
+    [locale]/publicar/     alta pública: negocio, evento o anuncio de particular
+    [locale]/directorio/   alojamiento, eventos y actividades de la ciudad
+    admin/                 panel de moderación, fuera de [locale] y con noindex
+    calendar.ics           el eclipse como cita de calendario, por tenant
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
     og/                    imagen social generada al vuelo
@@ -341,6 +357,89 @@ la guía de seguridad para posicionar es exactamente lo que prohíbe la regla 7.
 llega a filtrarlas, la solución correcta es un `canonical` cruzado hacia un dominio de
 referencia, no reescribirlas.
 
+### Diseño e interfaz
+
+El sistema vive entero en `src/app/globals.css`: color, tipografía fluida con `clamp()`,
+espaciado, curvas y duraciones de movimiento. Los componentes consumen variables y no
+inventan valores; ninguno escribe un color literal, o los cuatro dominios dejarían de
+distinguirse.
+
+Decisiones que conviene no revertir:
+
+- **El dato es el protagonista.** `Datum` en `ui.tsx` y la clase `.datum` existen para
+  que la cifra calculada —«4 min 48 s»— sea el objeto más grande de la pantalla, con la
+  etiqueta encima y pequeña. Es el activo diferencial de la red: enterrarlo en una fila
+  de tabla era regalarlo.
+- **Toda página tiene un `<h1>`.** Lo emite `PageHeader`. Ocho páginas no lo tenían
+  porque `Section` emite `<h2>`: un documento sin encabezado de primer nivel deja a
+  quien usa un lector de pantalla sin saber de qué va, y a los buscadores sin la señal
+  más fuerte que hay.
+- **El header es una isla flotante de una sola fila** que se contrae al bajar con
+  `animation-timeline: scroll()`. Sustituye a un header de dos filas cuya segunda era
+  una tira de once enlaces con scroll horizontal de la que solo se veían tres. Arriba
+  quedan cuatro apartados fijos —**Horarios, Visor 360º, Guía y Blog**—, el
+  conmutador de idioma y el botón de publicar. Los mismos cuatro están en la barra
+  inferior de móvil: `HEADER_NAV` y `MOBILE_NAV` son la misma constante a propósito.
+- **El conmutador de idioma es un control segmentado ES/EN, no una bandera.** Una
+  bandera identifica un país, no una lengua: para quien lee en inglés desde Marruecos
+  o desde Irlanda la bandera correcta no existe. Enseñar las dos opciones a la vez
+  dice además que la web está en dos idiomas, cosa que un enlace «English» no dice.
+  Cada mitad apunta a la traducción de la página actual.
+- **Una sola taxonomía para las dos pantallas.** `src/i18n/navigation.ts` define cuatro
+  grupos —Cuándo, Dónde, Ir, Saber— y de ahí beben el menú, la barra inferior de móvil
+  y el pie. Que móvil y escritorio agrupen distinto obliga a aprender dos webs.
+- **El menú es la API de `popover`**: capa superior, cierre con Escape y al pulsar
+  fuera, sin una línea de JavaScript. Donde no haya soporte, el pie lleva todos los
+  enlaces igualmente.
+- **Todo lo que se mueve respeta `prefers-reduced-motion`**, y las entradas por scroll
+  usan `animation-timeline: view()` bajo `@supports`: cero JavaScript, cero
+  observadores, y donde no hay soporte el contenido simplemente ya está visible.
+- **`isolation: isolate` en el cuerpo, no `position` en los hijos.** El campo de
+  estrellas se coloca por detrás con `z-index: -1`. La alternativa —subir el contenido
+  a una capa superior— rompía el header: Tailwind v4 emite sus utilidades dentro de
+  `@layer utilities`, y **una regla sin capa gana a cualquier regla en capa por
+  especificidad que tenga la otra**, así que una regla suelta con `position: relative`
+  convertía en `relative` el `sticky` del header y el `fixed` de la barra inferior. Ni
+  `:where()` lo evitaba. Es la trampa a recordar al escribir CSS global en este
+  proyecto.
+- **Las tablas llevan `.data-table`**: cabecera pegajosa, cifras de ancho fijo en
+  las celdas numéricas y realce de fila al pasar el puntero. Una tabla ancha sin
+  realce de fila es donde más fácil se pierde el renglón.
+- **Barra de duración en `/horarios`, diferencia en el ranking de la portada.** No
+  es una inconsistencia: la tabla larga baja de 4 min 51 s a menos de dos minutos
+  y ahí una barra anclada al cero compara de verdad; las diez primeras localidades
+  van de 4 min 51 s a 4 min 18 s y sus barras salen todas entre el 89 % y el 100 %,
+  sin distinguir nada. Recortar el eje para que parezcan distintas es el engaño
+  clásico del gráfico de barras, así que en la portada va la diferencia en
+  segundos, que es exacta y responde la pregunta real: cuánto se pierde bajando
+  por la lista. **Esa diferencia se calcula restando los valores ya redondeados**,
+  no los crudos, para que la tabla cuadre si alguien hace la resta a mano; y si
+  redondea a cero se muestra una raya, porque declaramos precisión de segundos y
+  una diferencia de décimas no es un dato.
+- **El proxy propaga la ruta** en `x-eclipse-path`. Un layout de App Router no recibe la
+  ruta, y sin ella el conmutador de idioma tenía que apuntar siempre a la home: cambiar
+  a inglés desde una guía te sacaba de la guía.
+
+### Dos funciones que ganaron protagonismo
+
+- **`/visor`**: el visor de realidad aumentada tiene URL propia, metadatos e imagen
+  social. Antes vivía enterrado dentro del localizador y solo aparecía tras calcular un
+  resultado: no se podía enlazar, ni compartir, ni posicionar. Para la función más
+  diferencial de la red, ése era el error de producto más caro que había. Se titula
+  «¿Me lo tapa ese edificio?» y no «realidad aumentada» a propósito: la tecnología no
+  es el beneficio.
+- **`/publicar`**: un único formulario para las tres cosas que alguien de la ciudad
+  quiere dar de alta —su negocio o alojamiento, un acto con fecha, o un anuncio
+  entre particulares—. Antes solo existía el alta de clasificados y no había manera
+  de meter un hotel ni una observación pública: el directorio se quedaba vacío
+  esperando altas que nadie sabía cómo hacer. El tipo se elige arriba y el
+  formulario se adapta; `/clasificados/nuevo` redirige aquí de forma permanente.
+- **`/calendar.ics`**: el eclipse como cita de calendario, con las horas de la ciudad
+  del tenant y dos avisos —el día antes y quince minutos antes de C1—. Es el único
+  mecanismo de retención que no depende de una lista de correo: quien entra hoy no
+  vuelve solo dentro de once meses, pero su teléfono sí le avisa. Las horas salen del
+  cálculo, no de una tabla escrita a mano.
+
 ---
 
 ## 5. SEO y GEO
@@ -434,6 +533,47 @@ fuera. `CONSENT_VERSION` en `src/lib/consent.ts` invalida los consentimientos pr
 **súbela al añadir cualquier finalidad o proveedor nuevo**, porque un sí para AdSense no
 cubre añadir después otra red.
 
+### Base de datos y panel de moderación
+
+El proyecto de Supabase es **`eclipsewebs`** (organización Demiurgos, región
+`eu-west-3` / París). `supabase/schema.sql` es el esquema aplicado: cuatro tablas
+—`listings`, `events`, `agent_runs`, `agent_actions`— con RLS activo en todas.
+
+Dos detalles del esquema que no son cosméticos y conviene no revertir:
+
+- La función del trigger lleva `set search_path = ''`. Sin él, quien pueda crear
+  objetos en un esquema del `search_path` puede secuestrar a qué tabla resuelve
+  el código de la función.
+- Las políticas usan `(select auth.uid())` y no `auth.uid()` a secas. Envuelto en
+  un subselect se evalúa una vez por consulta; suelto, una vez por fila.
+
+`agent_runs` y `agent_actions` tienen RLS activo **y ninguna política**, a
+propósito: eso deniega todo salvo a la service role. El linter lo marca como
+aviso informativo y es el comportamiento correcto.
+
+El panel vive en **`/admin`**, fuera de `[locale]`: no tiene versión en inglés,
+no tiene tenant, no lleva el header de la web ni el banner de cookies, y sale del
+sitemap y de los `hreflang`. Modera una sola persona para los cuatro dominios, así
+que **no filtra por tenant**: obligar a entrar cuatro veces sería multiplicar el
+trabajo por cuatro sin ganar nada.
+
+Cómo está protegido, en orden de importancia:
+
+1. **Sin `ADMIN_PASSWORD` el panel devuelve 404.** No existe, en vez de enseñar un
+   formulario de login a quien pase por ahí.
+2. La sesión es una cookie `httpOnly`, `SameSite=Lax`, `path=/admin`, con la
+   caducidad firmada por HMAC de la contraseña. Una cookie con fecha futura y
+   firma inventada no entra.
+3. **Cada acción de escritura vuelve a comprobar la sesión.** Una acción de
+   servidor es un endpoint HTTP como cualquier otro: que la página que la dibuja
+   esté protegida no protege la acción.
+4. La contraseña se compara en tiempo constante sobre digests, así que ni el
+   contenido ni la longitud se filtran por el tiempo de respuesta.
+
+El nivel de pago (`tier`) se cambia **aparte** de aprobar. Es lo único del panel
+que mueve dinero: subir a destacado va después de cobrar, y mezclarlo con el
+visto bueno es el camino directo a regalarlo por descuido.
+
 ---
 
 ## 7. El blog
@@ -524,6 +664,12 @@ del modelo** (`agents/guardrails.ts`). El prompt es una petición; esto es una b
 4. **Topes por ejecución** (`maxWrites`).
 5. **Auditoría completa** en `agent_runs` y `agent_actions`.
 6. **La persona gana**: la moderación solo toca filas que siguen en `pending`.
+
+El agente de eventos escribe en la tabla `events`, que **ya se lee desde la web**:
+sale en `/directorio` como agenda de la ciudad. Antes se llenaba sin que nadie la
+mirara. Además de lo que encuentra el agente, cualquiera puede dar de alta un acto
+desde `/publicar`; entra como `pending` y se modera igual, y se le exige el mismo
+enlace comprobable que a las fuentes del agente.
 
 ### Los datos astronómicos no los escribe ningún agente
 
@@ -659,6 +805,10 @@ Cosas que conviene no romper:
    interpolan del cálculo, también en los posts y dentro de las ilustraciones.
 9. **Ninguna imagen de la que no tengamos los derechos.** Las ilustraciones son SVG propio;
    si algún día hay fotos, van por el campo `photo` y con su crédito.
+10. **Ningún color literal en un componente.** Todo sale de las variables de
+    `globals.css`, o los cuatro dominios dejan de distinguirse.
+11. **Toda página nueva empieza por `PageHeader`**, que es quien emite el `<h1>`.
+12. **Toda animación nueva se apaga con `prefers-reduced-motion`.**
 
 ---
 
@@ -681,10 +831,21 @@ Cosas que conviene no romper:
 - Escribir los perfiles locales de Algeciras, La Línea y Melilla antes de comprar sus
   dominios: un dominio sin `src/content/local/` sirve la guía genérica y no compite.
 - Mapa interactivo de la franja de totalidad.
+- «Cuánto ganas si bajas X km»: dado un punto, cuántos segundos más de totalidad se
+  consiguen desplazándose y en qué dirección. Es *la* pregunta de Cádiz y de Málaga, el
+  cálculo ya la resuelve y nadie la responde.
+- Modo día D: el 2 de agosto de 2027 la portada debería ser un reloj en vivo con la fase
+  actual y el aviso de ponerse y quitarse el filtro. Ese día concentrará más tráfico que
+  los once meses anteriores juntos.
 - Posts de blog para Cádiz, Tarifa y Gibraltar cuando se activen esos dominios: hoy su
   `/blog` sale vacío y con `noindex`, que es el comportamiento correcto mientras no haya
   contenido propio de esas ciudades.
-- Autenticación para que los negocios gestionen su propia ficha.
+- Autenticación para que los negocios gestionen su propia ficha. Hoy el alta desde
+  `/publicar` es anónima y se modera a mano, que es lo correcto para empezar pero no
+  escala si el directorio se llena.
+- Que el panel avise. Hoy hay que entrar a `/admin` para ver si hay algo esperando;
+  un correo diario con el recuento pendiente evitaría que una ficha se quede una
+  semana sin publicar.
 - Ampliar el registro de 35 a los 115 municipios (el agente auditor propone los que faltan).
 - Comprar los dominios recomendados de §2 antes de que los cojan.
 - Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§9).

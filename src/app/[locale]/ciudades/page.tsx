@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection } from "@/components/AdSlot";
-import { Badge, Card, Section } from "@/components/ui";
+import { Badge, Card, PageHeader, Section } from "@/components/ui";
 import { citiesByTotality, citiesOutsideTotality, cityName, formatDuration, formatObscuration } from "@/lib/eclipse/cities";
 import { ECLIPSE } from "@/lib/eclipse/event";
 import { buildMetadata, datasetGraph, jsonLd } from "@/lib/seo";
@@ -49,14 +49,15 @@ export default async function CitiesPage({ params }: { params: Promise<{ locale:
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(datasetGraph(tenant, locale))} />
 
-      <Section
+      <PageHeader
         title={locale === "es" ? "Localidades dentro de la franja" : "Locations inside the path"}
         lead={
           locale === "es"
             ? `El eclipse será total en Ceuta, en Melilla, en Gibraltar y en ${total} municipios andaluces. Estas son las localidades principales, ordenadas por duración.`
             : `The eclipse is total in Ceuta, Melilla, Gibraltar and ${total} Andalusian municipalities. These are the main locations, ordered by duration.`
         }
-      >
+      />
+      <Section>
         <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Object.entries(byProvince).map(([province, count]) => (
             <Card key={province}>

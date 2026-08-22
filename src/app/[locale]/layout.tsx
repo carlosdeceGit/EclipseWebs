@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import "../globals.css";
-import { Footer, Header } from "@/components/SiteChrome";
+import { BottomNav, Footer, Header } from "@/components/SiteChrome";
 import { CookieConsent } from "@/components/CookieConsent";
 import { adsActive, adsenseClientId, consentMode } from "@/lib/ads";
-import { currentTenant } from "@/lib/tenant-context";
+import { currentPath, currentTenant } from "@/lib/tenant-context";
 import { tenantCity, tenantOrigin } from "@/lib/tenants";
 import { getDictionary } from "@/i18n/dictionary";
 import { HTML_LANG, LOCALES, isLocale, localePath } from "@/i18n/config";
@@ -71,6 +71,9 @@ export default async function LocaleLayout({
   const tenant = await currentTenant();
   const city = tenantCity(tenant);
   const t = getDictionary(locale);
+  // El camino real de la petición, que el proxy deja en una cabecera. Antes iba
+  // fijo a "/" y el conmutador de idioma sacaba de la página a quien lo pulsara.
+  const path = await currentPath();
   // Solo se le pasa el cliente al banner cuando hay un bloque que servir. Con la
   // cuenta recién dada de alta y ningún bloque creado todavía, `ads.txt` ya publica
   // el identificador —que es lo que Google necesita para verificar el dominio— pero
@@ -79,17 +82,20 @@ export default async function LocaleLayout({
 
   return (
     <html lang={HTML_LANG[locale]} style={{ ["--accent" as string]: tenant.accentHsl }}>
-      <body className="sky min-h-screen">
+      {/* El relleno inferior deja sitio a la barra de navegación de móvil, que es
+          fija: sin él tapa el final del pie. */}
+      <body className="sky min-h-screen pb-[4.5rem] md:pb-0">
         <a
           href="#contenido"
           className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:px-3 focus:py-2"
-          style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+          style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
         >
           {t.common.skipToContent}
         </a>
-        <Header tenant={tenant} city={city} locale={locale} path="/" />
+        <Header tenant={tenant} city={city} locale={locale} path={path} />
         <main id="contenido">{children}</main>
         <Footer tenant={tenant} locale={locale} />
+        <BottomNav locale={locale} path={path} />
         {/*
           El script de AdSense lo monta este componente, no el layout: mientras no
           haya un sí explícito no se descarga nada de Google ni se instala ninguna

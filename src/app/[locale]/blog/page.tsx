@@ -128,7 +128,7 @@ export default async function BlogIndexPage({
           <Link
             href={localePath(locale, "/horarios")}
             className="rounded-xl px-5 py-3 font-semibold"
-            style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
           >
             {t.home.ctaTimes}
           </Link>

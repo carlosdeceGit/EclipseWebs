@@ -149,7 +149,7 @@ export function LocatorClient({
             onClick={useMyLocation}
             disabled={busy}
             className="rounded-xl px-5 py-3 font-semibold disabled:opacity-60"
-            style={{ background: "hsl(var(--accent))", color: "hsl(224 44% 8%)" }}
+            style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
           >
             {busy ? t.locating : t.useMyLocation}
           </button>
@@ -220,8 +220,10 @@ export function LocatorClient({
       </form>
 
       {result && (
+        // `enter` da la entrada al resultado: aparece de golpe justo después de
+        // una espera de red, y sin la transición se lee como un salto de página.
         <div
-          className="rounded-2xl border p-6"
+          className="enter rounded-2xl border p-6"
           style={{ borderColor: "hsl(var(--accent))", background: "hsl(var(--surface))" }}
         >
           <p className="text-2xl font-black" style={{ color: "hsl(var(--accent))" }}>

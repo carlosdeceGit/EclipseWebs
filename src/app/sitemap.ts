@@ -29,10 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ["/", 1, "daily"],
     ["/horarios", 0.9, "weekly"],
     ["/localizador", 0.9, "weekly"],
+    ["/visor", 0.9, "weekly"],
     ["/ciudades", 0.8, "weekly"],
-    ["/directorio", 0.8, "daily"],
+    ["/directorio", 0.85, "daily"],
     ["/clasificados", 0.8, "daily"],
-    ["/clasificados/nuevo", 0.4, "monthly"],
+    ["/publicar", 0.7, "monthly"],
     ["/anunciate", 0.5, "monthly"],
     ["/faq", 0.7, "weekly"],
     ...(posts.length > 0

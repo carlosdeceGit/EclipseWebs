@@ -30,3 +30,17 @@ export async function currentLocale(): Promise<Locale> {
   const value = h.get("x-eclipse-locale") ?? "";
   return isLocale(value) ? value : DEFAULT_LOCALE;
 }
+
+/**
+ * Camino interno de la petición, sin prefijo de idioma y empezando por `/`.
+ *
+ * Lo deja el proxy. Existe porque un layout de App Router no recibe la ruta y el
+ * selector de idioma la necesita para no mandar a la home desde cualquier página.
+ * Cae a `/` si la cabecera no está, que es lo que ocurre en las rutas que no
+ * pasan por el proxy.
+ */
+export async function currentPath(): Promise<string> {
+  const h = await headers();
+  const value = h.get("x-eclipse-path") ?? "/";
+  return value.startsWith("/") ? value : `/${value}`;
+}
