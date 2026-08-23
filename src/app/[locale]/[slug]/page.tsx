@@ -136,6 +136,7 @@ export default async function ArticlePage({
       <ArticleLayout
         header={<ArticleHeader title={content.title} lead={content.description} />}
         toc={<ArticleToc sections={sections} locale={locale} />}
+        locale={locale}
       >
         <article className="prose-eclipse mt-10">
           <Blocks blocks={content.body.slice(0, adAfter)} city={city} locale={locale} />

@@ -4,7 +4,7 @@ import "../globals.css";
 import { BottomNav, Footer, Header } from "@/components/SiteChrome";
 import { CookieConsent } from "@/components/CookieConsent";
 import { adsActive, adsenseClientId, consentMode } from "@/lib/ads";
-import { currentPath, currentTenant } from "@/lib/tenant-context";
+import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity, tenantOrigin } from "@/lib/tenants";
 import { getDictionary } from "@/i18n/dictionary";
 import { HTML_LANG, LOCALES, isLocale, localePath } from "@/i18n/config";
@@ -73,7 +73,6 @@ export default async function LocaleLayout({
   const t = getDictionary(locale);
   // El camino real de la petición, que el proxy deja en una cabecera. Antes iba
   // fijo a "/" y el conmutador de idioma sacaba de la página a quien lo pulsara.
-  const path = await currentPath();
   // Solo se le pasa el cliente al banner cuando hay un bloque que servir. Con la
   // cuenta recién dada de alta y ningún bloque creado todavía, `ads.txt` ya publica
   // el identificador —que es lo que Google necesita para verificar el dominio— pero
@@ -92,10 +91,10 @@ export default async function LocaleLayout({
         >
           {t.common.skipToContent}
         </a>
-        <Header tenant={tenant} city={city} locale={locale} path={path} />
+        <Header tenant={tenant} city={city} locale={locale} />
         <main id="contenido">{children}</main>
         <Footer tenant={tenant} locale={locale} />
-        <BottomNav locale={locale} path={path} />
+        <BottomNav tenant={tenant} city={city} locale={locale} />
         {/*
           El script de AdSense lo monta este componente, no el layout: mientras no
           haya un sí explícito no se descarga nada de Google ni se instala ninguna

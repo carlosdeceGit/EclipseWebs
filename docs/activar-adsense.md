@@ -340,6 +340,28 @@ Se pueden activar de uno en uno: un hueco sin ID no se dibuja, así que se puede
 empezar por `inArticle` —el que mejor rinde— y ver cómo queda antes de encender el
 resto.
 
+### Dónde cae cada hueco
+
+| Hueco | Dónde sale | Qué mueve al activarse |
+| --- | --- | --- |
+| `sidebar` | Carril derecho de guías y posts, bajo el índice | **Nada.** Esa columna está vacía |
+| `inArticle` | Tras el primer `h2` de la guía o del post | Empuja el resto del artículo |
+| `listing` | Entre bloques de `/ciudades` y del directorio | Empuja lo que va debajo |
+| `header` | Tras el destacado del índice del blog | Empuja las categorías |
+| `footer` | Al final de la página | Nada visible |
+
+`sidebar` es el que primero conviene encender: es el único cuya activación **no
+desplaza una sola línea de contenido** —está comprobado midiendo la posición del
+cuerpo del artículo con los huecos apagados y encendidos— y acompaña toda la lectura
+en la única columna que no compite con el texto.
+
+**Una cosa que verificar el día de encenderlo**: en móvil el hueco del carril se
+oculta con CSS (`hidden lg:block`), porque ahí el carril va entre la entradilla y el
+primer párrafo y un bloque de 600 px delante del artículo sería insoportable. Google
+prefiere unidades adaptativas a bloques ocultos, así que conviene mirar en el informe
+si ese bloque acumula impresiones sin rellenar; si molesta, la salida es darle su
+propia posición al final del artículo en móvil en vez de esconderlo.
+
 **Anuncios automáticos: no.** Son tentadores porque prometen colocación óptima sin
 trabajo, pero requieren el script de Google en el `<head>` de todas las páginas
 —incompatible con el consentimiento previo— e insertan bloques donde les parece, lo
@@ -356,7 +378,8 @@ parte que se suele olvidar y la que dejaba secciones vacías con ochenta píxele
 relleno.
 
 El coste de esta decisión, dicho claramente: el día que se activen los anuncios el
-contenido se moverá una vez, porque aparece altura que antes no estaba. Es un salto
+contenido se moverá una vez, porque aparece altura que antes no estaba. Salvo en
+`sidebar`, que por vivir en una columna vacía no mueve nada — ver la tabla de arriba. Es un salto
 que se paga una sola vez —el día de activar— en lugar de mostrar recuadros vacíos
 todos los días hasta entonces. Con el hueco ya activo sí se reserva la altura, que es
 lo que evita el salto mientras carga cada anuncio.

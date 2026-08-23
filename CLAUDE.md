@@ -226,7 +226,10 @@ src/
     local/                 conocimiento local por ciudad: miradores, accesos, clima
   components/
     ui.tsx                 primitivas: PageHeader, Section, Datum, Card, Callout…
-    SiteChrome.tsx         header isla, menú a pantalla completa, barra inferior, pie
+    SiteChrome.tsx         pie, y la envoltura de servidor de la navegación
+    SiteNav.tsx            header, menú y barra inferior: cliente, por el camino actual
+    Icon.tsx               iconos de navegación y el disco de la marca
+    Article.tsx            armazón de guías y posts: índice, carril, anterior/siguiente
     Blocks.tsx             renderizador de bloques, compartido por guías y blog
     EclipseTimeline.tsx    los cinco contactos dibujados a escala
     ViewerPromo.tsx        el Visor 360º en la portada, con su escena del cielo
@@ -245,6 +248,7 @@ src/
     api/eclipse            datos de todas las localidades
     api/circumstances      datos para coordenadas arbitrarias
     og/                    imagen social generada al vuelo
+    icon/                  favicon con el acento del dominio
     ads.txt                autorización de inventario, por tenant
     blog/rss.xml           feed del blog de la ciudad del dominio
     llms.txt, robots.ts, sitemap.ts
@@ -416,9 +420,18 @@ Decisiones que conviene no revertir:
   no los crudos, para que la tabla cuadre si alguien hace la resta a mano; y si
   redondea a cero se muestra una raya, porque declaramos precisión de segundos y
   una diferencia de décimas no es un dato.
-- **El proxy propaga la ruta** en `x-eclipse-path`. Un layout de App Router no recibe la
-  ruta, y sin ella el conmutador de idioma tenía que apuntar siempre a la home: cambiar
-  a inglés desde una guía te sacaba de la guía.
+- **La navegación sabe en qué página está porque lo pregunta en el cliente.** Ésta
+  costó dos intentos y conviene no volver al primero. Un layout de App Router **no se
+  vuelve a renderizar al navegar entre páginas del mismo segmento**, así que un camino
+  pasado como propiedad desde el layout se queda congelado en el de la página por la
+  que se entró. Con eso, el conmutador de idioma seguía apuntando a la home después de
+  pinchar cualquier enlace —cambiar de idioma te sacaba de la página— y el apartado
+  marcado como activo era el anterior. Una recarga lo tapaba, que es por lo que pasó
+  desapercibido. Ahora `src/components/SiteNav.tsx` lee `usePathname()`, que sí cambia
+  en cada navegación. Se normalizan los prefijos `/es` y `/en` para que el servidor
+  —que ve la ruta reescrita— y el navegador produzcan lo mismo y no haya discrepancia
+  de hidratación. Al cliente solo cruzan cadenas: el diccionario, el registro de
+  tenants y el cálculo de las 35 localidades se quedan en el servidor.
 
 ### El armazón de lectura
 
@@ -447,6 +460,15 @@ secciones de media y ninguna forma de saber qué había dentro sin leerlo entero
   estructurados: se le daban a Google y no se le enseñaban a nadie. Además de contenido
   desaprovechado, marcar como `FAQPage` algo que no está visible en la página es motivo
   declarado para dejar de mostrar el resultado.
+- **El carril reserva el mejor hueco de anuncio de la web, y no le quita nada al
+  lector.** En pantalla ancha esa columna está vacía por debajo del índice: el anuncio
+  acompaña toda la lectura sin empujar el texto ni un píxel. Comprobado midiendo la
+  posición del cuerpo del artículo con los huecos apagados y encendidos: idéntica, así
+  que activar publicidad no mueve la maquetación. En móvil no se dibuja —el carril va
+  ahí entre la entradilla y el primer párrafo, y meter un bloque de 600 px delante del
+  artículo es el patrón que hunde una web—. El carril lleva un tope de altura con
+  desplazamiento propio porque un elemento pegajoso más alto que la ventana deja su
+  parte de abajo fuera de alcance para siempre.
 - **En `/ciudades` no hay barras, hay diferencia en segundos.** Es la misma decisión que en
   el ranking de la portada y por el mismo motivo ampliado: en una parrilla de tres columnas
   las longitudes quedan separadas por el ancho de una tarjeta y ya no se comparan, y arriba

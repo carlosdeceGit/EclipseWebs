@@ -42,6 +42,9 @@ export function buildMetadata(opts: {
 
   return {
     metadataBase: new URL(origin),
+    // El icono se genera por dominio en `/icon`: ver esa ruta. `shortcut` cubre a
+    // los navegadores que siguen pidiendo `/favicon.ico` por su cuenta.
+    icons: { icon: "/icon", shortcut: "/icon", apple: "/icon" },
     title: fullTitle,
     description,
     alternates: {

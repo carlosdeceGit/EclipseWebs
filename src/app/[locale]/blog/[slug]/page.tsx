@@ -183,6 +183,7 @@ export default async function BlogPostPage({
           />
         }
         toc={<ArticleToc sections={sections} locale={locale} />}
+        locale={locale}
       >
         {/* Portada. Va después del titular y no antes: el titular es lo que el lector
             ha venido a confirmar, y en móvil una imagen a sangre lo empujaría fuera

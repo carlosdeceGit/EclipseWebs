@@ -944,3 +944,21 @@ table :where(td, th).num,
 section[id] {
   scroll-margin-top: calc(var(--header-h) + 1.5rem);
 }
+
+/*
+ * El carril del artículo: índice y, en su día, el hueco de anuncio.
+ *
+ * El tope de altura existe por lo que va a pasar cuando el hueco se active: un
+ * bloque de 600 px debajo del índice puede sumar más que la pantalla, y un
+ * elemento pegajoso más alto que la ventana deja su parte de abajo fuera de
+ * alcance para siempre. Con el tope, el carril se desplaza por dentro y todo
+ * sigue siendo alcanzable. Mientras el hueco no esté configurado no se dibuja
+ * nada, el índice solo nunca llega al tope y no aparece ninguna barra.
+ */
+@media (min-width: 1024px) {
+  .rail {
+    max-height: calc(100dvh - var(--header-h) - 3rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}

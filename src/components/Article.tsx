@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AdSlot } from "@/components/AdSlot";
 import { headingId } from "@/components/Blocks";
 import type { Block } from "@/content/articles";
 import type { Locale } from "@/lib/eclipse/types";
@@ -57,8 +58,7 @@ export function ArticleToc({ sections, locale }: { sections: Section[]; locale: 
   return (
     <nav
       aria-label={t.article.sectionsNav}
-      className="surface mb-10 rounded-2xl p-5 lg:mb-0 lg:sticky"
-      style={{ top: "calc(var(--header-h) + 1.5rem)" }}
+      className="surface mb-10 rounded-2xl p-5 lg:mb-0"
     >
       <p className="datum-label mb-3">{t.article.onThisPage}</p>
       {/* Sin numerar. Varios posts ya numeran sus propios apartados —«1. El Monte
@@ -91,10 +91,12 @@ export function ArticleToc({ sections, locale }: { sections: Section[]; locale: 
 export function ArticleLayout({
   header,
   toc,
+  locale,
   children,
 }: {
   header: ReactNode;
   toc: ReactNode;
+  locale: Locale;
   children: ReactNode;
 }) {
   return (
@@ -103,7 +105,28 @@ export function ArticleLayout({
       {/* Ocupa las dos filas para que el carril tenga toda la altura del artículo:
           un elemento pegajoso dentro de una celda de la altura de su contenido no
           tiene por dónde desplazarse y se queda quieto. */}
-      <div className="lg:row-span-2">{toc}</div>
+      <div className="lg:row-span-2">
+        <div className="rail lg:sticky" style={{ top: "calc(var(--header-h) + 1.5rem)" }}>
+          {toc}
+          {/*
+            El hueco del carril.
+            Es el mejor sitio de la web para un anuncio y el único que no le quita
+            nada al lector: en pantalla ancha esta columna está vacía por debajo
+            del índice, el anuncio acompaña toda la lectura sin empujar el texto
+            ni un píxel, y el día que se active no habrá salto de maquetación
+            porque no hay nada debajo que mover.
+
+            Solo a partir de `lg`. En móvil el carril va dentro del flujo, justo
+            entre la entradilla y el primer párrafo: meter ahí un bloque de 600 px
+            sería poner un anuncio delante del artículo que el lector ha venido a
+            leer, y ése es exactamente el patrón que hunde una web.
+
+            Mientras el hueco no esté configurado, `AdSlot` no dibuja nada: ni
+            marcador, ni borde, ni altura reservada.
+          */}
+          <AdSlot name="sidebar" locale={locale} className="mt-6 hidden lg:block" />
+        </div>
+      </div>
       {/* Un `div`, no un `main`: el layout ya envuelve todo el contenido en
           `<main id="contenido">`, que es el destino del enlace de salto. Anidar
           otro sería marcado inválido y dejaría a los lectores de pantalla con dos
