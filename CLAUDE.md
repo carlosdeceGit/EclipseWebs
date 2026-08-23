@@ -370,6 +370,17 @@ distinguirse.
 
 Decisiones que conviene no revertir:
 
+- **El hero lleva imagen de fondo por tenant y crédito obligatorio.** `Tenant.hero`
+  declara `src`, `focal` y un `credit` que **no es opcional a propósito**: la imagen es
+  una ilustración generada con IA de un eclipse que todavía no ha ocurrido, así que
+  cualquier imagen realista de ese momento es necesariamente inventada. El pie del hero
+  lo dice con esas palabras. Presentarla como fotografía sería gastar justo la
+  credibilidad que sostiene el resto de la web —la de publicar cifras calculadas y
+  declarar su margen de error— a cambio de una imagen bonita. Los dos botones son las
+  dos preguntas de quien llega, «¿se verá desde tu sitio?» y «dónde verlo aquí», no
+  tareas administrativas. El tenant «hub» lleva la misma imagen porque las
+  previsualizaciones de Vercel salen por un host `*.vercel.app` y caen ahí: sin eso,
+  revisar el hero en una preview enseñaría el estado sin imagen.
 - **El dato es el protagonista.** `Datum` en `ui.tsx` y la clase `.datum` existen para
   que la cifra calculada —«4 min 48 s»— sea el objeto más grande de la pantalla, con la
   etiqueta encima y pequeña. Es el activo diferencial de la red: enterrarlo en una fila
@@ -512,6 +523,11 @@ secciones de media y ninguna forma de saber qué había dentro sin leerlo entero
   genera enlaces y menciones.
 - Imagen OG generada al vuelo por ciudad e idioma, solo con primitivas (sin fuentes ni
   imágenes externas: en el borde, cada fetch es un punto de fallo).
+- **Favicon por dominio en `/icon`**, con el acento del tenant y en SVG. Antes no había
+  ninguno: `/favicon.ico` devolvía 404 en cada carga y en los resultados de móvil de
+  Google, donde el icono va pegado al título, ésta era la única web sin marca. Un icono
+  estático obligaría a un archivo por dominio y a acordarse de regenerarlo al añadir el
+  quinto.
 - **Crawlers de IA permitidos a propósito.** Que ChatGPT, Claude, Perplexity y Gemini citen
   estas páginas es un canal de captación, no una fuga.
 
@@ -540,6 +556,11 @@ certificado por Google.
   Google verifica la propiedad del dominio, semanas antes de encender nada— pero no aparece
   el banner de cookies ni se carga el script de Google. Eso espera a que exista además algún
   ID de bloque: no se pide consentimiento para una finalidad que todavía no existe.
+- **El hueco `sidebar` es el único que no desplaza nada al activarse.** Vive en el
+  carril de las guías y los posts, donde esa columna está vacía por debajo del índice.
+  Comprobado midiendo la posición del cuerpo del artículo con los huecos apagados y
+  encendidos: idéntica. Por eso es por el que conviene empezar. La tabla de qué mueve
+  cada uno de los cinco está en `docs/activar-adsense.md` §6.
 - **`/ads.txt` se genera por tenant** desde el ID de cliente, y es obligatorio para que
   Google autorice el inventario.
 - **La verificación de propiedad ante Google** se hace por `ads.txt` o por la etiqueta
@@ -859,12 +880,18 @@ Cosas que conviene no romper:
 7. **La guía de seguridad no se suaviza por motivos comerciales.**
 8. **Ninguna cifra escrita a mano en el contenido.** Horas, duraciones y altura del Sol se
    interpolan del cálculo, también en los posts y dentro de las ilustraciones.
-9. **Ninguna imagen de la que no tengamos los derechos.** Las ilustraciones son SVG propio;
-   si algún día hay fotos, van por el campo `photo` y con su crédito.
+9. **Ninguna imagen de la que no tengamos los derechos, y ninguna imagen generada sin
+   decir que lo es.** Las ilustraciones son SVG propio; si algún día hay fotos, van por
+   el campo `photo` y con su crédito. La imagen del hero es generada y su `credit` es
+   obligatorio en el tipo: describe un eclipse que aún no ha ocurrido.
 10. **Ningún color literal en un componente.** Todo sale de las variables de
     `globals.css`, o los cuatro dominios dejan de distinguirse.
 11. **Toda página nueva empieza por `PageHeader`**, que es quien emite el `<h1>`.
 12. **Toda animación nueva se apaga con `prefers-reduced-motion`.**
+13. **Nada que dependa de la ruta actual se pasa como propiedad desde el layout.** Un
+    layout de App Router no se vuelve a renderizar al navegar dentro de su segmento y
+    ese valor se queda congelado. Lo que necesite la ruta lo pregunta en el cliente con
+    `usePathname()`, normalizando el prefijo de idioma.
 
 ---
 
@@ -905,3 +932,83 @@ Cosas que conviene no romper:
 - Ampliar el registro de 35 a los 115 municipios (el agente auditor propone los que faltan).
 - Comprar los dominios recomendados de §2 antes de que los cojan.
 - Escribir a Lionstar y Qiwei pidiendo el certificado de examen UE de tipo (§9).
+
+---
+
+## 14. Registro de sesiones
+
+Historial de qué se hizo en cada sesión. Se añade por arriba y no se reescribe: la
+verdad vigente del proyecto está en las secciones de antes, no aquí.
+
+### 2026-08-23 — Rediseño de UX/UI completo, tres funciones nuevas, panel de moderación y dos fallos de fondo
+
+- **Qué se hizo:**
+  - **Sistema de diseño** rehecho en `src/app/globals.css`: tipografía fluida con
+    `clamp()`, cuatro superficies, tonos de acento derivados con `color-mix` en oklab,
+    tokens de sombra y foco visible. Entradas por scroll con `animation-timeline:
+    view()` bajo `@supports`, sin JavaScript.
+  - **Header nuevo**: isla flotante de una fila que se contrae al bajar, con los cuatro
+    apartados que pidió el cliente —Horarios, Visor 360º, Guía, Blog—, conmutador de
+    idioma segmentado y botón de publicar. Menú a pantalla completa con la API de
+    `popover`. Taxonomía única en `src/i18n/navigation.ts` para menú, barra inferior y
+    pie.
+  - **Tres funciones nuevas**: `/visor` (el visor AR con URL propia, metadatos e imagen
+    social; antes solo aparecía dentro del localizador y no se podía enlazar),
+    `/publicar` (un formulario para negocio, evento o anuncio de particular) y
+    `/directorio` convertido en el de la ciudad, que por fin lee la tabla `events` que
+    el agente diario llenaba sin que ninguna página la mirara. Más `/calendar.ics`.
+  - **Panel de moderación en `/admin`** sobre el Supabase `eclipsewebs`, fuera de
+    `[locale]`, con la puerta construida antes que el panel: 404 sin `ADMIN_PASSWORD`,
+    cookie firmada por HMAC, comprobación de sesión en cada acción de escritura y
+    comparación de contraseña en tiempo constante.
+  - **Hero** con imagen de fondo por tenant (generada con IA, 1,9 MB JPEG → 45 KB WebP)
+    y crédito obligatorio.
+  - **Armazón de lectura** para guías y posts en `src/components/Article.tsx`: índice
+    sacado de los propios `h2`, anclas permanentes, ritmo de secciones y anterior/
+    siguiente. Las FAQ de las guías pasan a verse, no solo a darse en JSON-LD.
+  - **Blog** con saltos por categoría y estado vacío con su `h1`. **`/ciudades`** con
+    puesto y diferencia exacta respecto a la primera.
+  - **Favicon por dominio** en `/icon`, que no existía.
+  - Fusionadas las PR [#2](https://github.com/carlosdeceGit/EclipseWebs/pull/2) y
+    [#3](https://github.com/carlosdeceGit/EclipseWebs/pull/3) a la rama de producción.
+
+- **Decisiones tomadas:**
+  - **Barras donde comparan, diferencia donde no.** La barra de duración se queda en la
+    columna de tabla de `/horarios`, donde la lista baja de 4 min 51 s a menos de dos
+    minutos. En el ranking de la portada y en las tarjetas de `/ciudades` va la
+    diferencia en segundos: ahí las barras salían todas entre el 89 % y el 100 % y
+    recortar el eje para que parecieran distintas es el engaño clásico del gráfico de
+    barras. La diferencia se resta sobre valores **ya redondeados** para que cuadre a
+    mano, y un empate al segundo se dice como empate.
+  - **El crédito de la imagen del hero es obligatorio en el tipo**, no una convención:
+    describe un eclipse que aún no ha ocurrido.
+  - **Nada que dependa de la ruta se pasa desde el layout** (regla 13). La navegación
+    pasó al cliente; al navegador solo cruzan cadenas.
+  - No se toca nada de mailing: no hay a quién enviar todavía.
+
+- **Dos fallos de fondo encontrados y corregidos:**
+  - **El campo de estrellas rompía el header.** Tailwind v4 emite sus utilidades dentro
+    de `@layer utilities`, y una regla sin capa gana a cualquier regla en capa por
+    especificidad que tenga la otra: una regla suelta con `position: relative` convertía
+    en `relative` el `sticky` del header y el `fixed` de la barra inferior. Ni `:where()`
+    lo evitaba. Se resuelve con `isolation: isolate` en el cuerpo. Se encontró midiendo
+    `getComputedStyle(header).position` en un navegador real, no leyendo el código.
+  - **El conmutador de idioma llevaba a otra página.** Solo ocurría navegando por
+    dentro, porque un layout de App Router no se vuelve a renderizar dentro de su
+    segmento; una recarga lo tapaba y por eso pasó desapercibido meses. Arrastraba
+    además el apartado activo del header y de la barra inferior.
+  - Menores: el escape de punto y coma de iCalendar no escapaba nada (`"\;"` en
+    JavaScript es `";"`), ocho páginas no tenían `<h1>`, y `/favicon.ico` devolvía 404
+    en cada carga.
+
+- **Pendiente / próximos pasos:**
+  - **`ADMIN_PASSWORD` en Vercel**: sin ella `/admin` devuelve 404 y la moderación es
+    inaccesible.
+  - **Comprobar que la integración de Vercel enlazó el proyecto correcto**: la
+    `SUPABASE_URL` tiene que contener `wbjfsxgvdynobmsfdtqv`. Las lecturas contra
+    Supabase siguen sin verificarse en vivo: la política de red del entorno de
+    desarrollo deniega el CONNECT a `*.supabase.co`.
+  - Al encender el hueco `sidebar`, mirar si el bloque oculto en móvil acumula
+    impresiones sin rellenar (ver `docs/activar-adsense.md` §6).
+  - Imágenes de hero para Cádiz, Tarifa y Gibraltar cuando existan.
+  - El resto sigue en §13.
