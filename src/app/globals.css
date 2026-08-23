@@ -806,9 +806,15 @@ table :where(td, th).num,
 .prose-eclipse h2 {
   font-size: var(--step-2);
   font-weight: 700;
-  margin-top: 2.5rem;
+  margin-top: 3rem;
   margin-bottom: 0.75rem;
+  padding-top: 1.5rem;
   scroll-margin-top: calc(var(--header-h) + 1.5rem);
+  /* El filete de sección: ver la nota de ritmo de secciones más abajo. */
+  background-image: linear-gradient(90deg, hsl(var(--border-strong)), hsl(var(--border) / 0));
+  background-repeat: no-repeat;
+  background-size: 60% 1px;
+  background-position: left top;
 }
 .prose-eclipse h3 {
   font-size: var(--step-1);
@@ -851,4 +857,108 @@ table :where(td, th).num,
 }
 .prose-eclipse strong {
   color: hsl(var(--text));
+}
+
+/*
+ * Ritmo de secciones.
+ *
+ * Cinco secciones seguidas con solo un salto de margen entre ellas se leen como
+ * un muro: no hay forma de ver de un vistazo por dónde se va. El filete que se
+ * desvanece marca el corte sin meter una línea entera a través de la columna,
+ * que a esta anchura pesa demasiado.
+ *
+ * Va como fondo y no como `border-top` para no tener que tocar `position` ni
+ * `border-image`: sobre este CSS global, cualquier regla suelta que fije
+ * `position` puede ganarle a las utilidades de Tailwind, que viven en `@layer`.
+ */
+/* Ancla permanente del encabezado: presente siempre, visible al pedirla. */
+.heading-anchor {
+  margin-left: 0.5rem;
+  font-weight: 400;
+  color: hsl(var(--accent));
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+.prose-eclipse h2:hover .heading-anchor,
+.heading-anchor:focus-visible {
+  opacity: 1;
+}
+
+/*
+ * Índice de secciones.
+ *
+ * El realce es el borde izquierdo y no el color del texto: el enlace ya es un
+ * enlace y teñirlo entero de acento convertiría el carril en una mancha del
+ * color de la marca compitiendo con el propio artículo.
+ */
+.toc-link {
+  display: block;
+  color: hsl(var(--muted));
+  text-decoration: none;
+  border-left: 2px solid transparent;
+  padding-left: 0.625rem;
+  margin-left: -0.625rem;
+  transition:
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease);
+}
+.toc-link:hover,
+.toc-link:focus-visible {
+  color: hsl(var(--text));
+  border-left-color: hsl(var(--accent));
+}
+
+/*
+ * Ficha de salto: categorías del blog, provincias, cualquier ancla dentro de la
+ * página. Es un enlace, no un filtro — no hay estado que perder ni JavaScript
+ * que cargar, y compartir la URL lleva al mismo sitio.
+ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--surface-2));
+  border-radius: 999px;
+  padding: 0.4rem 0.9rem;
+  font-size: var(--step--1);
+  font-weight: 600;
+  color: hsl(var(--muted));
+  text-decoration: none;
+  transition:
+    color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    background var(--dur-fast) var(--ease);
+}
+.chip:hover,
+.chip:focus-visible {
+  color: hsl(var(--text));
+  border-color: hsl(var(--accent));
+  background: hsl(var(--accent) / 0.1);
+}
+
+/*
+ * Cualquier sección con ancla tiene que dejar sitio al header flotante: sin esto,
+ * saltar a una sección la deja medio tapada por la isla del header.
+ */
+section[id] {
+  scroll-margin-top: calc(var(--header-h) + 1.5rem);
+}
+
+/*
+ * El carril del artículo: índice y, en su día, el hueco de anuncio.
+ *
+ * El tope de altura existe por lo que va a pasar cuando el hueco se active: un
+ * bloque de 600 px debajo del índice puede sumar más que la pantalla, y un
+ * elemento pegajoso más alto que la ventana deja su parte de abajo fuera de
+ * alcance para siempre. Con el tope, el carril se desplaza por dentro y todo
+ * sigue siendo alcanzable. Mientras el hueco no esté configurado no se dibuja
+ * nada, el índice solo nunca llega al tope y no aparece ninguna barra.
+ */
+@media (min-width: 1024px) {
+  .rail {
+    max-height: calc(100dvh - var(--header-h) - 3rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
