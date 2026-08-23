@@ -156,8 +156,8 @@ export default async function CityPage({
       <Section title={locale === "es" ? "Seguir preparando el viaje" : "Keep planning"}>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {t.nav.slice(1).map((item) => (
-            <Link key={item.href} href={localePath(locale, item.href)}>
-              <Card className="h-full text-center transition hover:brightness-125">
+            <Link key={item.href} href={localePath(locale, item.href)} className="block">
+              <Card interactive className="h-full text-center">
                 <span className="font-semibold">{item.label}</span>
               </Card>
             </Link>

@@ -2,6 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdSection, AdSlot } from "@/components/AdSlot";
+import {
+  ArticleHeader,
+  ArticleLayout,
+  ArticleNav,
+  ArticleToc,
+  sectionsOf,
+  type ArticleLink,
+} from "@/components/Article";
 import { Blocks, inline, renderBlock } from "@/components/Blocks";
 import { Figure } from "@/components/art";
 import { Badge, Card, Section } from "@/components/ui";
@@ -9,6 +17,7 @@ import {
   BLOG_POSTS,
   BLOG_POSTS_BY_SLUG,
   CATEGORY_LABELS,
+  postsForCity,
   readingMinutes,
   relatedPosts,
 } from "@/content/blog";
@@ -87,6 +96,24 @@ export default async function BlogPostPage({
   const content = post.content[locale](city, tenant);
   const minutes = readingMinutes(content.body, content.lead);
   const related = relatedPosts(post);
+  const sections = [
+    ...sectionsOf(content.body),
+    ...(content.faq ? [{ id: "preguntas", text: t.home.faqTitle }] : []),
+  ];
+
+  // Anterior y siguiente en el orden editorial del blog de esta ciudad, que es el
+  // orden en el que se escribieron para leerse. «Relacionados» responde a otra
+  // pregunta —qué más hay sobre esto— y por eso siguen estando los dos.
+  const ordered = postsForCity(tenant.citySlug);
+  const at = ordered.findIndex((p) => p.slug === slug);
+  const link = (i: number): ArticleLink | undefined => {
+    const other = ordered[i];
+    if (!other) return undefined;
+    return {
+      href: `/blog/${other.slug}`,
+      title: other.content[locale](city, tenant).title,
+    };
+  };
 
   // El anuncio va tras el primer bloque de nivel 2: el lector ya se ha enganchado
   // pero todavía no ha llegado al grueso del artículo.
@@ -130,33 +157,39 @@ export default async function BlogPostPage({
         <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(faqGraph(content.faq))} />
       )}
 
-      <article className="mx-auto max-w-3xl px-4 py-12">
-        <div className="flex flex-wrap items-center gap-3 text-sm" style={{ color: "hsl(var(--muted))" }}>
-          <Link href={localePath(locale, "/blog")} className="hover:underline">
-            ← {t.blog.backToIndex}
-          </Link>
-          <Badge>{CATEGORY_LABELS[post.category][locale]}</Badge>
-          <span>
-            {minutes} {t.blog.readingTime}
-          </span>
-        </div>
-
-        <h1 className="mt-5 text-3xl font-black leading-tight sm:text-4xl">{content.title}</h1>
-        <p className="mt-5 text-lg" style={{ color: "hsl(var(--text))" }}>
-          {inline(content.lead)}
-        </p>
-        <p className="mt-4 text-sm" style={{ color: "hsl(var(--muted))" }}>
-          {post.updated
-            ? `${t.blog.updated} ${formatDate(post.updated, locale)}`
-            : `${t.blog.published} ${formatDate(post.published, locale)}`}
-        </p>
-
+      <ArticleLayout
+        header={
+          <ArticleHeader
+            meta={
+              <>
+                <Link href={localePath(locale, "/blog")} className="hover:underline">
+                  ← {t.blog.backToIndex}
+                </Link>
+                <Badge>{CATEGORY_LABELS[post.category][locale]}</Badge>
+                <span>
+                  {minutes} {t.blog.readingTime}
+                </span>
+              </>
+            }
+            title={content.title}
+            lead={inline(content.lead)}
+            after={
+              <p className="mt-4 text-sm" style={{ color: "hsl(var(--faint))" }}>
+                {post.updated
+                  ? `${t.blog.updated} ${formatDate(post.updated, locale)}`
+                  : `${t.blog.published} ${formatDate(post.published, locale)}`}
+              </p>
+            }
+          />
+        }
+        toc={<ArticleToc sections={sections} locale={locale} />}
+      >
         {/* Portada. Va después del titular y no antes: el titular es lo que el lector
             ha venido a confirmar, y en móvil una imagen a sangre lo empujaría fuera
             de la primera pantalla. */}
         {!coverInBody && <Figure art={post.cover} city={city} locale={locale} className="mt-8" />}
 
-        <div className="prose-eclipse mt-6">
+        <article className="prose-eclipse mt-8">
           <Blocks blocks={content.body.slice(0, adAfter)} city={city} locale={locale} />
           <AdSlot name="inArticle" locale={locale} className="my-8" />
           <Blocks blocks={content.body.slice(adAfter)} city={city} locale={locale} offset={adAfter} />
@@ -167,15 +200,17 @@ export default async function BlogPostPage({
               {renderBlock({ type: "faq", items: content.faq }, 9000, city, locale)}
             </>
           )}
-        </div>
+        </article>
 
-        <p className="mt-10 text-sm" style={{ color: "hsl(var(--muted))" }}>
+        <p className="mt-10 text-sm" style={{ color: "hsl(var(--faint))" }}>
           {t.blog.illustrationNote}{" "}
           <Link href={localePath(locale, "/fuentes")} className="underline">
             {t.common.sources}
           </Link>
         </p>
-      </article>
+
+        <ArticleNav prev={link(at - 1)} next={link(at + 1)} locale={locale} />
+      </ArticleLayout>
 
       {related.length > 0 && (
         <Section title={t.blog.related}>
@@ -183,8 +218,8 @@ export default async function BlogPostPage({
             {related.map((other) => {
               const otherContent = other.content[locale](city, tenant);
               return (
-                <Link key={other.slug} href={localePath(locale, `/blog/${other.slug}`)}>
-                  <Card className="h-full transition hover:brightness-125">
+                <Link key={other.slug} href={localePath(locale, `/blog/${other.slug}`)} className="block">
+                  <Card interactive className="h-full">
                     <Badge tone="muted">{CATEGORY_LABELS[other.category][locale]}</Badge>
                     <h3 className="mt-3 font-semibold leading-snug">{otherContent.title}</h3>
                     <p className="mt-1.5 text-sm" style={{ color: "hsl(var(--muted))" }}>

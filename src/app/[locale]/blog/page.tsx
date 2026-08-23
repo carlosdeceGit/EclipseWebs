@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AdSection } from "@/components/AdSlot";
 import { inline } from "@/components/Blocks";
 import { Figure } from "@/components/art";
-import { Badge, Card, Section } from "@/components/ui";
+import { Badge, Card, PageHeader, Section, buttonStyle } from "@/components/ui";
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -81,7 +81,7 @@ function PostCard({
 
   return (
     <Link href={localePath(locale, `/blog/${post.slug}`)} className="block">
-      <Card className={`h-full transition hover:brightness-125 ${featured ? "lg:flex lg:gap-8" : ""}`}>
+      <Card interactive className={`h-full ${featured ? "lg:flex lg:gap-8" : ""}`}>
         <div className={featured ? "lg:w-1/2" : ""}>
           <Figure art={post.cover} city={city} locale={locale} />
         </div>
@@ -122,29 +122,36 @@ export default async function BlogIndexPage({
   const posts = postsForCity(tenant.citySlug);
 
   if (posts.length === 0) {
+    // Hoy es el estado de Cádiz, Tarifa y Gibraltar. Aunque la página lleve
+    // `noindex` mientras no haya contenido propio, es una página que la gente ve
+    // desde el menú, así que necesita su encabezado de primer nivel como
+    // cualquier otra: sin él, quien navega con lector de pantalla no sabe dónde
+    // ha entrado.
     return (
-      <Section title={t.blog.empty} lead={t.blog.emptyLead.replace("{city}", name)}>
-        <div className="flex flex-wrap gap-3">
-          <Link
-            href={localePath(locale, "/horarios")}
-            className="rounded-xl px-5 py-3 font-semibold"
-            style={{ background: "hsl(var(--accent))", color: "hsl(var(--on-accent))" }}
-          >
-            {t.home.ctaTimes}
-          </Link>
-          <Link
-            href={localePath(locale, "/localizador")}
-            className="rounded-xl border px-5 py-3 font-semibold"
-            style={{ borderColor: "hsl(var(--border))" }}
-          >
-            {t.home.ctaWhere}
-          </Link>
-        </div>
-      </Section>
+      <>
+        <PageHeader eyebrow="Blog" title={t.blog.empty} lead={t.blog.emptyLead.replace("{city}", name)} />
+        <Section>
+          <div className="flex flex-wrap gap-3">
+            <Link href={localePath(locale, "/horarios")} {...buttonStyle("primary")}>
+              {t.home.ctaTimes}
+            </Link>
+            <Link href={localePath(locale, "/localizador")} {...buttonStyle("ghost")}>
+              {t.home.ctaWhere}
+            </Link>
+          </div>
+        </Section>
+      </>
     );
   }
 
   const [featured, ...rest] = posts;
+  // El recuento incluye el destacado aunque no se repita en su parrilla: quien lee
+  // «Viaje · 4» y encuentra tres tarjetas ya ha visto la cuarta arriba.
+  const categories = CATEGORY_ORDER.map((category) => ({
+    category,
+    count: posts.filter((p) => p.category === category).length,
+  })).filter((c) => c.count > 0);
+
   const summaries = posts.map((p) => {
     const c = p.content[locale](city, tenant);
     return { slug: p.slug, title: c.title, description: c.description, published: p.published };
@@ -163,20 +170,30 @@ export default async function BlogIndexPage({
         )}
       />
 
-      <section className="mx-auto max-w-6xl px-4 pb-2 pt-12">
-        <h1 className="text-3xl font-black leading-tight sm:text-4xl">
-          {t.blog.title.replace("{city}", name)}
-        </h1>
-        <p className="mt-4 max-w-3xl text-lg" style={{ color: "hsl(var(--muted))" }}>
-          {t.blog.lead.replace("{city}", name)}
-        </p>
-        <p className="mt-4 flex flex-wrap items-center gap-4 text-sm" style={{ color: "hsl(var(--muted))" }}>
-          <span>{t.blog.postCount.replace("{count}", String(posts.length))}</span>
-          <a href="/blog/rss.xml" className="underline" style={{ color: "hsl(var(--accent))" }}>
+      <PageHeader
+        eyebrow={`${t.blog.postCount.replace("{count}", String(posts.length))} · ${name}`}
+        title={t.blog.title.replace("{city}", name)}
+        lead={t.blog.lead.replace("{city}", name)}
+      >
+        {/* Saltos por categoría. Dieciséis artículos en una sola columna obligan a
+            recorrer el índice entero para descubrir que hay una sección de viaje;
+            con las categorías arriba, se ve de un vistazo de qué va el blog y se
+            entra directamente a la parte que interesa. Son anclas, no filtros: sin
+            JavaScript, y el enlace sigue funcionando si se comparte. */}
+        <div className="flex flex-wrap items-center gap-2">
+          {categories.map(({ category, count }) => (
+            <a key={category} href={`#${category}`} className="chip">
+              {CATEGORY_LABELS[category][locale]}
+              <span className="tabular ml-1.5" style={{ color: "hsl(var(--faint))" }}>
+                {count}
+              </span>
+            </a>
+          ))}
+          <a href="/blog/rss.xml" className="chip">
             {t.blog.feed}
           </a>
-        </p>
-      </section>
+        </div>
+      </PageHeader>
 
       <Section title={t.blog.latest}>
         <PostCard post={featured} city={city} tenant={tenant} locale={locale} featured />
@@ -188,7 +205,7 @@ export default async function BlogIndexPage({
         const inCategory = rest.filter((p) => p.category === category);
         if (inCategory.length === 0) return null;
         return (
-          <Section key={category} title={CATEGORY_LABELS[category][locale]}>
+          <Section key={category} id={category} title={CATEGORY_LABELS[category][locale]}>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {inCategory.map((post) => (
                 <PostCard key={post.slug} post={post} city={city} tenant={tenant} locale={locale} />

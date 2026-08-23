@@ -2,6 +2,7 @@ import { Figure } from "@/components/art";
 import { Callout } from "@/components/ui";
 import type { Block } from "@/content/articles";
 import type { CityWithCircumstances, Locale } from "@/lib/eclipse/types";
+import { getDictionary } from "@/i18n/dictionary";
 
 /**
  * Renderizador de bloques de contenido.
@@ -53,12 +54,21 @@ export function renderBlock(
   locale: Locale,
 ) {
   switch (block.type) {
-    case "h2":
+    case "h2": {
+      const id = headingId(block.text);
       return (
-        <h2 key={i} id={headingId(block.text)}>
+        <h2 key={i} id={id}>
           {block.text}
+          {/* El ancla ya existía; lo que faltaba era poder cogerla. Se dibuja
+              transparente y aparece al pasar el puntero o al recibir el foco, así
+              que no roba peso al encabezado pero sigue estando en el orden de
+              tabulación para quien navega con teclado. */}
+          <a href={`#${id}`} className="heading-anchor" aria-label={getDictionary(locale).article.linkToSection}>
+            #
+          </a>
         </h2>
       );
+    }
     case "h3":
       return <h3 key={i}>{block.text}</h3>;
     case "p":

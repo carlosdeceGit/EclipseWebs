@@ -97,6 +97,17 @@ export interface Dictionary {
    * dibuja el contenedor en absoluto.
    */
   ads: { label: string };
+  /**
+   * Cadenas del armazón de lectura, compartido por las guías y los posts del blog.
+   */
+  article: {
+    onThisPage: string;
+    sectionsNav: string;
+    linkToSection: string;
+    previous: string;
+    next: string;
+    moreReading: string;
+  };
   blog: {
     /** Contiene `{city}`. */
     title: string;
@@ -215,6 +226,14 @@ const es: Dictionary = {
     aboveHorizon: "sobre el horizonte",
   },
   ads: { label: "Publicidad" },
+  article: {
+    onThisPage: "En esta página",
+    sectionsNav: "Secciones de este artículo",
+    linkToSection: "Enlace permanente a esta sección",
+    previous: "Anterior",
+    next: "Siguiente",
+    moreReading: "Seguir leyendo",
+  },
   blog: {
     title: "Blog del eclipse en {city}",
     lead: "Guías, consejos y contexto para vivir el eclipse del 2 de agosto de 2027 en {city}: dónde verlo, cómo llegar, qué comer y qué esperar exactamente durante la totalidad.",
@@ -331,6 +350,14 @@ const en: Dictionary = {
     aboveHorizon: "above the horizon",
   },
   ads: { label: "Advertisement" },
+  article: {
+    onThisPage: "On this page",
+    sectionsNav: "Sections in this article",
+    linkToSection: "Permalink to this section",
+    previous: "Previous",
+    next: "Next",
+    moreReading: "Keep reading",
+  },
   blog: {
     title: "The {city} eclipse blog",
     lead: "Guides, advice and context for the total solar eclipse of 2 August 2027 in {city}: where to watch, how to get there, what to eat and exactly what to expect during totality.",

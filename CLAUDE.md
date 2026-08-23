@@ -420,6 +420,40 @@ Decisiones que conviene no revertir:
   ruta, y sin ella el conmutador de idioma tenía que apuntar siempre a la home: cambiar
   a inglés desde una guía te sacaba de la guía.
 
+### El armazón de lectura
+
+Las guías (`/seguridad`, `/guia`, `/clima`…) y los posts del blog son el mismo objeto de
+lectura para quien llega de un buscador, así que comparten armazón:
+`src/components/Article.tsx`. Eran prosa corrida en una columna centrada, con cinco
+secciones de media y ninguna forma de saber qué había dentro sin leerlo entero.
+
+- **El índice sale de los propios `h2`**, que ya llevaban ancla estable. No hay lista de
+  secciones escrita a mano en ningún sitio: si alguien añade o renombra un `h2`, el índice
+  le sigue solo. Con menos de tres secciones no se dibuja.
+- **Un solo `<nav>` en el documento.** Va en el DOM entre la cabecera y el cuerpo —su sitio
+  en móvil— y en pantalla ancha la colocación automática de la rejilla lo manda al carril
+  pegajoso de la derecha. Duplicarlo y ocultar uno con `hidden` mete dos veces la misma
+  navegación en el árbol de accesibilidad.
+- **No marca la sección activa.** Hacerlo sin JavaScript no es fiable, y un índice que
+  señala la sección equivocada es peor que uno que no señala ninguna.
+- **El titular de artículo va un escalón por debajo del de página** (`--step-3` frente a
+  `--step-4`). El de una página es una etiqueta corta; el de un artículo es una frase
+  entera y al tamaño mayor ocupaba cuatro líneas antes de empezar el texto.
+- **Anterior y siguiente al final**, en el orden editorial del registro de guías o del
+  blog. Antes una guía terminaba y la única salida era el menú. Solo entre guías
+  editoriales: encadenar el aviso legal detrás de la de seguridad no es una lectura que
+  nadie quiera seguir.
+- **Las preguntas frecuentes de las guías ahora se ven.** Existían solo como datos
+  estructurados: se le daban a Google y no se le enseñaban a nadie. Además de contenido
+  desaprovechado, marcar como `FAQPage` algo que no está visible en la página es motivo
+  declarado para dejar de mostrar el resultado.
+- **En `/ciudades` no hay barras, hay diferencia en segundos.** Es la misma decisión que en
+  el ranking de la portada y por el mismo motivo ampliado: en una parrilla de tres columnas
+  las longitudes quedan separadas por el ancho de una tarjeta y ya no se comparan, y arriba
+  de la lista salen todas casi llenas y se leen como un subrayado del número. La barra sigue
+  donde funciona, que es la columna de tabla de `/horarios`. Empate al segundo redondeado
+  —Tánger y Tetuán— se dice «igual que la primera», no «−0 s» ni «la más larga».
+
 ### Dos funciones que ganaron protagonismo
 
 - **`/visor`**: el visor de realidad aumentada tiene URL propia, metadatos e imagen
