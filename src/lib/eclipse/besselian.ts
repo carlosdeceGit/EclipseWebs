@@ -260,6 +260,33 @@ export interface LocalCircumstances {
 }
 
 /**
+ * Altura y azimut del Sol para un observador y un instante ya resueltos.
+ *
+ * Es la conversión estándar de coordenadas horarias a horizontales. Vive aparte
+ * porque la usan dos sitios —el máximo en `circumstancesAt()` y cada punto de
+ * `eclipseTrack()`— y tenerla escrita dos veces era la forma segura de que un día
+ * el visor apuntase a un sitio y la tabla dijese otro.
+ *
+ * El azimut se cuenta desde el norte hacia el este, que es la convención del
+ * visor y la de las tablas del IGN.
+ */
+function horizontalCoordinates(lat: number, f: Fundamental): { altitudeDeg: number; azimuthDeg: number } {
+  const latRad = lat * DEG;
+  const decRad = f.declination * DEG;
+  const haRad = f.hourAngle * DEG;
+
+  const sinAlt =
+    Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(haRad);
+  const altitude = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+  const azimuth = Math.atan2(
+    -Math.cos(decRad) * Math.sin(haRad),
+    Math.sin(decRad) * Math.cos(latRad) - Math.cos(decRad) * Math.sin(latRad) * Math.cos(haRad),
+  );
+
+  return { altitudeDeg: altitude / DEG, azimuthDeg: (azimuth / DEG + 360) % 360 };
+}
+
+/**
  * Fracción del disco solar cubierta, a partir de los radios aparentes y la
  * separación entre centros. Es la intersección de dos círculos.
  */
@@ -310,16 +337,7 @@ export function circumstancesAt(observer: ObserverPosition): LocalCircumstances 
       : 0;
 
   // Altura y azimut del Sol en el máximo.
-  const latRad = observer.lat * DEG;
-  const decRad = atMax.declination * DEG;
-  const haRad = atMax.hourAngle * DEG;
-  const sinAlt =
-    Math.sin(latRad) * Math.sin(decRad) + Math.cos(latRad) * Math.cos(decRad) * Math.cos(haRad);
-  const altitude = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
-  const azimuth = Math.atan2(
-    -Math.cos(decRad) * Math.sin(haRad),
-    Math.sin(decRad) * Math.cos(latRad) - Math.cos(decRad) * Math.sin(latRad) * Math.cos(haRad),
-  );
+  const sky = horizontalCoordinates(observer.lat, atMax);
 
   return {
     isTotal,
@@ -332,8 +350,8 @@ export function circumstancesAt(observer: ObserverPosition): LocalCircumstances 
     partialEnd: partialEndT === null ? null : toDate(partialEndT),
     magnitude: Math.max(0, magnitude),
     obscuration: isPartial ? obscurationFraction(sunRadius, moonRadius, separation) : 0,
-    sunAltitudeDeg: altitude / DEG,
-    sunAzimuthDeg: (azimuth / DEG + 360) % 360,
+    sunAltitudeDeg: sky.altitudeDeg,
+    sunAzimuthDeg: sky.azimuthDeg,
   };
 }
 
@@ -400,4 +418,118 @@ export function distanceToCenterlineKm(observer: ObserverPosition): number | nul
   }
 
   return minimum;
+}
+
+/**
+ * Instante UTC a horas TDT desde t0. Es el inverso exacto de `toDate()`.
+ */
+function fromDate(date: Date): number {
+  const utHours = (date.getTime() - ECLIPSE_DAY_UTC) / 3600_000;
+  return utHours - ELEMENTS.t0Hours + DELTA_T_SECONDS / 3600;
+}
+
+/**
+ * Fracción del disco solar cubierta en un instante ya resuelto.
+ *
+ * Los radios aparentes salen de las dos tangencias, igual que en el máximo: en la
+ * externa m = rSol + rLuna = L1 y en la interna m = rLuna − rSol = −L2.
+ */
+function coverageAt(f: Fundamental): number {
+  const separation = Math.hypot(f.u, f.v);
+  const sunRadius = (f.bigL1 + f.bigL2) / 2;
+  const moonRadius = (f.bigL1 - f.bigL2) / 2;
+  if (separation >= f.bigL1) return 0;
+  return obscurationFraction(sunRadius, moonRadius, separation);
+}
+
+/** Los cinco contactos, con nombre. */
+export type ContactKey = "partialStart" | "totalityStart" | "maximum" | "totalityEnd" | "partialEnd";
+
+/** Dónde está el Sol en el cielo, y cuánto lo tapa la Luna, en un instante dado. */
+export interface SkySample {
+  /** Instante UTC de la muestra. */
+  time: Date;
+  /** Altura sobre el horizonte, en grados. */
+  altitudeDeg: number;
+  /** Azimut desde el norte hacia el este, en grados. */
+  azimuthDeg: number;
+  /** Fracción del área del disco solar cubierta, de 0 a 1. */
+  obscuration: number;
+  /** El contacto que representa esta muestra, o `null` si es un punto intermedio. */
+  contact: ContactKey | null;
+}
+
+/**
+ * Posición del Sol y fase del eclipse para un instante cualquiera.
+ *
+ * `circumstancesAt()` responde por el máximo, que es el dato de las tablas. Esto
+ * responde por **cualquier momento**, que es lo que necesita el visor: el Sol se
+ * mueve unos 30° de azimut entre el primer y el último contacto, así que el
+ * edificio que no tapa el máximo puede tapar perfectamente el inicio de la
+ * totalidad.
+ */
+export function skyPositionAt(observer: ObserverPosition, time: Date): SkySample {
+  const f = fundamental(observer, fromDate(time));
+  const sky = horizontalCoordinates(observer.lat, f);
+  return {
+    time,
+    altitudeDeg: sky.altitudeDeg,
+    azimuthDeg: sky.azimuthDeg,
+    obscuration: coverageAt(f),
+    contact: null,
+  };
+}
+
+/**
+ * Recorrido del Sol por el cielo durante todo el eclipse.
+ *
+ * Devuelve los cinco contactos —los que existan en ese punto— más una rejilla de
+ * puntos intermedios repartidos entre el primero y el último, todo ordenado en el
+ * tiempo. Es lo que el visor dibuja como arco sobre la imagen de la cámara.
+ *
+ * Fuera de la penumbra no hay eclipse y no hay recorrido que enseñar: se devuelve
+ * un único punto, el del máximo acercamiento, para que el visor siga sabiendo
+ * dónde estará el Sol.
+ *
+ * **Solo se devuelven los puntos con el Sol por encima del horizonte.** La
+ * geometría besseliana resuelve la posición del observador respecto al cono de
+ * sombra sin preguntarse si mira hacia el Sol, así que para un punto en las
+ * antípodas sale un eclipse perfectamente calculado que ocurre bajo tierra.
+ * Dibujarlo en el visor sería mandar a alguien a apuntar la cámara al suelo. Si
+ * no queda ningún punto visible, el recorrido está vacío y el visor lo dice.
+ *
+ * `samples` es el número de puntos intermedios. Con 32 el arco de dos horas y
+ * media queda liso en pantalla y la respuesta de la API sigue siendo pequeña.
+ */
+export function eclipseTrack(observer: ObserverPosition, samples = 32): SkySample[] {
+  const eclipse = circumstancesAt(observer);
+
+  const named: Array<[ContactKey, Date | null]> = [
+    ["partialStart", eclipse.partialStart],
+    ["totalityStart", eclipse.totalityStart],
+    ["maximum", eclipse.maximum],
+    ["totalityEnd", eclipse.totalityEnd],
+    ["partialEnd", eclipse.partialEnd],
+  ];
+
+  const marks: SkySample[] = named
+    .filter((entry): entry is [ContactKey, Date] => entry[1] !== null)
+    .map(([contact, time]) => ({ ...skyPositionAt(observer, time), contact }));
+
+  const visible = (sample: SkySample) => sample.altitudeDeg > 0;
+
+  if (!eclipse.isPartial || !eclipse.partialStart || !eclipse.partialEnd) {
+    return marks.filter((sample) => sample.contact === "maximum" && visible(sample));
+  }
+
+  const from = eclipse.partialStart.getTime();
+  const to = eclipse.partialEnd.getTime();
+  const between: SkySample[] = [];
+  for (let i = 1; i < samples; i++) {
+    between.push(skyPositionAt(observer, new Date(from + ((to - from) * i) / samples)));
+  }
+
+  return [...marks, ...between]
+    .filter(visible)
+    .sort((a, b) => a.time.getTime() - b.time.getTime());
 }

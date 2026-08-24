@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import type { Locale } from "@/lib/eclipse/types";
-import { SolarARViewer } from "../localizador/SolarARViewer";
+import {
+  SolarARViewer,
+  trackFromApi,
+  type ApiTrackPoint,
+  type ViewerTrackPoint,
+} from "../localizador/SolarARViewer";
 
 export interface ViewerDefaults {
   cityName: string;
@@ -10,6 +15,8 @@ export interface ViewerDefaults {
   sunAltitudeDeg: number;
   maximumTime: string;
   timeZone: string;
+  /** Recorrido del Sol durante todo el eclipse, resuelto en el servidor. */
+  track: ViewerTrackPoint[];
 }
 
 interface Refined {
@@ -17,6 +24,7 @@ interface Refined {
   sunAltitudeDeg: number;
   maximumTime: string;
   timeZone: string;
+  track: ViewerTrackPoint[];
   /** Coordenadas redondeadas, solo para enseñar sobre qué punto se está calculando. */
   label: string;
 }
@@ -72,6 +80,7 @@ export function ViewerClient({
           const data = (await response.json()) as {
             sunAzimuthDeg: number;
             sunAltitudeDeg: number;
+            sunTrack?: ApiTrackPoint[];
             contactsLocal: { maximum: string | null; timeZone: string };
           };
           if (!data.contactsLocal.maximum) throw new Error("no maximum");
@@ -80,6 +89,7 @@ export function ViewerClient({
             sunAltitudeDeg: data.sunAltitudeDeg,
             maximumTime: data.contactsLocal.maximum,
             timeZone: data.contactsLocal.timeZone,
+            track: trackFromApi(data.sunTrack),
             label: `${latitude.toFixed(3)}, ${longitude.toFixed(3)}`,
           });
         } catch {
@@ -106,6 +116,7 @@ export function ViewerClient({
         sunAltitudeDeg={active.sunAltitudeDeg}
         maximumTime={active.maximumTime}
         timeZone={active.timeZone}
+        track={active.track}
       />
 
       <div className="flex flex-wrap items-center gap-3">

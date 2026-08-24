@@ -8,7 +8,7 @@
  *   npx tsx scripts/validate-eclipse.ts
  */
 
-import { circumstancesAt } from "../src/lib/eclipse/besselian";
+import { circumstancesAt, eclipseTrack } from "../src/lib/eclipse/besselian";
 
 interface Check {
   name: string;
@@ -117,6 +117,84 @@ console.log(
 console.log(
   `Altura del Sol en el máximo: ${ceuta.sunAltitudeDeg.toFixed(1)}° · azimut ${ceuta.sunAzimuthDeg.toFixed(1)}°`,
 );
+
+
+/*
+  Recorrido del Sol durante el eclipse.
+
+  Es lo que dibuja el visor sobre la imagen de la cámara, así que tiene que
+  coincidir con las tablas hasta la última cifra: dos formas de calcular la
+  posición del Sol que se separen darían una web que dice una cosa y un visor que
+  apunta a otra.
+*/
+console.log("");
+
+const ceutaTrack = eclipseTrack({ lat: 35.8894, lon: -5.3213 });
+const trackMaximum = ceutaTrack.find((sample) => sample.contact === "maximum");
+
+if (!trackMaximum) {
+  console.log("✗ El recorrido de Ceuta no incluye el máximo");
+  failures++;
+} else {
+  const dAz = Math.abs(trackMaximum.azimuthDeg - ceuta.sunAzimuthDeg);
+  const dAlt = Math.abs(trackMaximum.altitudeDeg - ceuta.sunAltitudeDeg);
+  const ok = dAz < 1e-4 && dAlt < 1e-4 && Math.abs(trackMaximum.obscuration - ceuta.obscuration) < 1e-9;
+  if (!ok) failures++;
+  console.log(
+    `${ok ? "✓" : "✗"} El máximo del recorrido coincide con las tablas (Δ azimut ${dAz.toExponential(1)}°, Δ altura ${dAlt.toExponential(1)}°)`,
+  );
+}
+
+const contactsInTrack = ceutaTrack.filter((sample) => sample.contact !== null).length;
+if (contactsInTrack !== 5) {
+  console.log(`✗ El recorrido de Ceuta trae ${contactsInTrack} contactos y deberían ser cinco`);
+  failures++;
+} else {
+  console.log("✓ El recorrido de Ceuta trae los cinco contactos");
+}
+
+// Entre C2 y C3 el disco está tapado del todo, y en C1 y C4 no lo está en absoluto:
+// si esto se rompiera, el visor pintaría un Sol eclipsado donde no lo está.
+const totalityCovered = ceutaTrack
+  .filter((sample) => sample.contact === "totalityStart" || sample.contact === "totalityEnd")
+  .every((sample) => sample.obscuration > 0.9999);
+const edgesUncovered = ceutaTrack
+  .filter((sample) => sample.contact === "partialStart" || sample.contact === "partialEnd")
+  .every((sample) => sample.obscuration < 1e-6);
+if (!totalityCovered || !edgesUncovered) {
+  console.log("✗ La cobertura del disco en los contactos no cuadra");
+  failures++;
+} else {
+  console.log("✓ Disco tapado del todo en C2 y C3, y sin tapar en C1 y C4");
+}
+
+// El recorrido va ordenado en el tiempo y siempre con el Sol por encima del
+// horizonte: el visor une los puntos con una línea y no debe apuntar bajo tierra.
+const ordered = ceutaTrack.every(
+  (sample, index) => index === 0 || sample.time.getTime() >= ceutaTrack[index - 1].time.getTime(),
+);
+const aboveHorizon = ceutaTrack.every((sample) => sample.altitudeDeg > 0);
+if (!ordered || !aboveHorizon) {
+  console.log("✗ El recorrido no está ordenado o baja del horizonte");
+  failures++;
+} else {
+  const first = ceutaTrack[0];
+  const last = ceutaTrack[ceutaTrack.length - 1];
+  console.log(
+    `✓ Recorrido ordenado y sobre el horizonte: ${ceutaTrack.length} puntos, azimut ${first.azimuthDeg.toFixed(1)}° → ${last.azimuthDeg.toFixed(1)}°, altura ${first.altitudeDeg.toFixed(1)}° → ${last.altitudeDeg.toFixed(1)}°`,
+  );
+}
+
+// En las antípodas la geometría besseliana sigue dando un eclipse perfectamente
+// calculado que ocurre bajo tierra. El recorrido tiene que salir vacío: mandar a
+// alguien a apuntar la cámara al suelo sería peor que no enseñar nada.
+const sydney = eclipseTrack({ lat: -33.8688, lon: 151.2093 });
+if (sydney.length !== 0) {
+  console.log(`✗ Sídney devuelve ${sydney.length} puntos de recorrido con el Sol bajo el horizonte`);
+  failures++;
+} else {
+  console.log("✓ Sin Sol sobre el horizonte no hay recorrido que dibujar (Sídney)");
+}
 
 console.log(failures === 0 ? "\nTodas las comprobaciones pasan." : `\n${failures} comprobaciones fallan.`);
 process.exit(failures === 0 ? 0 : 1);
