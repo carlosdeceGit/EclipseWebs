@@ -1,4 +1,4 @@
-import { circumstancesAt } from "./besselian";
+import { circumstancesAt, eclipseTrack, type ObserverPosition } from "./besselian";
 import type { City, CityWithCircumstances, Locale } from "./types";
 
 /**
@@ -721,6 +721,25 @@ export function toLocalTime(date: Date | null, timeZone: string, withSeconds = t
     ...(withSeconds ? { second: "2-digit" } : {}),
     hour12: false,
   }).format(date);
+}
+
+/**
+ * Recorrido del Sol durante el eclipse, listo para el visor de cámara.
+ *
+ * El visor es un componente de cliente y no debe cargar el cálculo besseliano ni
+ * la tabla de elementos, así que las posiciones llegan resueltas y las horas ya
+ * formateadas en la zona horaria del punto. Los grados se redondean a la décima,
+ * que es la precisión que declaramos: dar más cifras sería fingir una puntería
+ * que ni el magnetómetro del móvil ni el campo visual estimado permiten.
+ */
+export function viewerTrack(observer: ObserverPosition, timeZone: string) {
+  return eclipseTrack(observer).map((sample) => ({
+    time: toLocalTime(sample.time, timeZone) ?? "",
+    azimuthDeg: Number(sample.azimuthDeg.toFixed(1)),
+    altitudeDeg: Number(sample.altitudeDeg.toFixed(1)),
+    obscuration: sample.obscuration,
+    contact: sample.contact,
+  }));
 }
 
 /**

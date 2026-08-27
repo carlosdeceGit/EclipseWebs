@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { Locale } from "@/lib/eclipse/types";
 import type { Dictionary } from "@/i18n/dictionary";
-import { SolarARViewer } from "./SolarARViewer";
+import { SolarARViewer, trackFromApi, type ApiTrackPoint } from "./SolarARViewer";
 
 /**
  * Sustituye marcadores `{clave}` en una plantilla.
@@ -24,6 +24,9 @@ interface Result {
   sunAltitudeDeg: number;
   sunAzimuthDeg: number;
   kmToCenterline: number | null;
+  /** Recorrido del Sol durante el eclipse. Opcional: una respuesta cacheada de
+      antes de que existiera no lo trae, y el visor se abre igual. */
+  sunTrack?: ApiTrackPoint[];
   contactsLocal: {
     timeZone: string;
     partialStart: string | null;
@@ -287,6 +290,7 @@ export function LocatorClient({
           sunAltitudeDeg={result.sunAltitudeDeg}
           maximumTime={result.contactsLocal.maximum}
           timeZone={result.contactsLocal.timeZone}
+          track={trackFromApi(result.sunTrack)}
         />
       )}
     </div>

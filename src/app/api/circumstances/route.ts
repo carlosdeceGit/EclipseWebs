@@ -1,4 +1,4 @@
-import { circumstancesAt, distanceToCenterlineKm } from "@/lib/eclipse/besselian";
+import { circumstancesAt, distanceToCenterlineKm, eclipseTrack } from "@/lib/eclipse/besselian";
 import { toLocalTime } from "@/lib/eclipse/cities";
 
 /**
@@ -32,6 +32,13 @@ export async function GET(request: Request) {
   // Solo tiene sentido preguntarse por el centro de la franja si hay eclipse.
   const kmToCenterline = eclipse.isPartial ? distanceToCenterlineKm({ lat, lon, altitudeM }) : null;
 
+  // Recorrido del Sol por el cielo durante todo el eclipse. Es lo que dibuja el
+  // visor de cámara, y publicarlo cuesta cuatro kilobytes: la posición del Sol
+  // instante a instante es exactamente lo que no puede sacarse de una tabla de
+  // contactos, y es la parte de estos datos que a otros les resulta más difícil
+  // de reproducir.
+  const track = eclipseTrack({ lat, lon, altitudeM: Number.isFinite(altitudeM) ? altitudeM : 0 });
+
   return Response.json(
     {
       query: { lat, lon, altitudeM, timeZone },
@@ -50,6 +57,14 @@ export async function GET(request: Request) {
         totalityEnd: eclipse.totalityEnd?.toISOString() ?? null,
         partialEnd: eclipse.partialEnd?.toISOString() ?? null,
       },
+      sunTrack: track.map((sample) => ({
+        timeUTC: sample.time.toISOString(),
+        timeLocal: toLocalTime(sample.time, timeZone),
+        azimuthDeg: Math.round(sample.azimuthDeg * 100) / 100,
+        altitudeDeg: Math.round(sample.altitudeDeg * 100) / 100,
+        obscuration: Math.round(sample.obscuration * 10000) / 10000,
+        contact: sample.contact,
+      })),
       contactsLocal: {
         timeZone,
         partialStart: toLocalTime(eclipse.partialStart, timeZone),
@@ -58,6 +73,8 @@ export async function GET(request: Request) {
         totalityEnd: toLocalTime(eclipse.totalityEnd, timeZone),
         partialEnd: toLocalTime(eclipse.partialEnd, timeZone),
       },
+      sunTrackNote:
+        "Posición del Sol y fracción del disco cubierta a lo largo de todo el eclipse, solo con el Sol por encima del horizonte. Los puntos con `contact` son los cinco contactos; el resto es una rejilla regular entre el primero y el último.",
       method:
         "Elementos besselianos NASA/GSFC resueltos según el Explanatory Supplement. Validado contra IGN y NASA.",
       warning:

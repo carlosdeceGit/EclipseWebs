@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { AdSection } from "@/components/AdSlot";
 import { Callout, Section, buttonStyle } from "@/components/ui";
 import { ViewerClient, type ViewerDefaults, type ViewerLabels } from "./ViewerClient";
-import { cityName, toLocalTime } from "@/lib/eclipse/cities";
+import { cityName, toLocalTime, viewerTrack } from "@/lib/eclipse/cities";
 import { breadcrumbGraph, buildMetadata, jsonLd } from "@/lib/seo";
 import { currentTenant } from "@/lib/tenant-context";
 import { tenantCity } from "@/lib/tenants";
@@ -37,8 +37,9 @@ const COPY = {
     howTitle: "Cómo se usa",
     how: [
       "Colócate donde vayas a estar el día del eclipse. El visor responde por ese punto, no por la ciudad.",
-      "Abre la cámara y gira sobre ti mismo hasta que el círculo se ponga sobre el Sol marcado.",
+      "Abre la cámara y gira sobre ti mismo siguiendo las flechas ámbar, que te dicen cuántos grados te faltan, hasta que el círculo entre en la retícula.",
       "Mira qué hay en esa dirección y a esa altura. Si hay un edificio, ese sitio no vale: la totalidad dura minutos y el Sol no se mueve lo suficiente para librarlo.",
+      "Comprueba también el principio y el final. La línea azul es el recorrido del Sol durante todo el eclipse, y en «Momento» se salta a cualquiera de los cinco contactos: entre el primero y el último el Sol se desplaza unos 24° y sube casi 30°, así que el tejado que no tapa el máximo puede tapar el resto.",
       "Si el móvil no tiene brújula o no da rumbo absoluto, usa el ajuste manual: el visor se abre igual.",
     ],
     privacyTitle: "La cámara no graba nada",
@@ -68,8 +69,9 @@ const COPY = {
     howTitle: "How to use it",
     how: [
       "Stand where you plan to be on eclipse day. The viewer answers for that point, not for the city.",
-      "Open the camera and turn until the circle sits over the marked Sun.",
+      "Open the camera and turn, following the amber arrows that tell you how many degrees are left, until the circle sits inside the reticle.",
       "Look at what is in that direction and at that height. If a building is there, the spot is no good: totality lasts minutes and the Sun does not move far enough to clear it.",
+      "Check the start and the end too. The blue line is the Sun's path through the whole eclipse, and \"Moment\" jumps to any of the five contacts: between the first and the last the Sun shifts about 24° and climbs almost 30°, so a roof that does not block maximum may block the rest.",
       "If your phone has no compass or gives no absolute heading, use manual adjustment: the viewer opens all the same.",
     ],
     privacyTitle: "The camera records nothing",
@@ -134,6 +136,9 @@ export default async function ViewerPage({ params }: { params: Promise<{ locale:
     sunAltitudeDeg: Number(city.eclipse.sunAltitudeDeg.toFixed(1)),
     maximumTime: city.localTimes.maximum,
     timeZone: city.timeZone,
+    // El recorrido se resuelve aquí, en el servidor: el visor se abre con el
+    // eclipse entero puesto y sin pedirle nada a nadie.
+    track: viewerTrack({ lat: city.lat, lon: city.lon, altitudeM: city.altitudeM }, city.timeZone),
   };
 
   const labels: ViewerLabels = {

@@ -202,11 +202,17 @@ export function fovForScreenAngle(screenAngle: number): { horizontal: number; ve
 /** Tolerancia por defecto para dar el objetivo por centrado, en grados. */
 export const ALIGN_TOLERANCE_DEG = 4;
 
-export interface ProjectTargetInput {
-  /** Azimut del objetivo (el Sol en el máximo), grados desde el norte. */
-  targetAzimuthDeg: number;
-  /** Altura del objetivo sobre el horizonte, grados. */
-  targetAltitudeDeg: number;
+/**
+ * Distancia angular, en grados, por debajo de la cual el objetivo se considera
+ * «cerca»: ya no hay que buscarlo por el cielo, solo afinar la puntería.
+ *
+ * Está por encima del medio campo visual corto (23°) a propósito: cuando el
+ * objetivo entra en el encuadre, el visor ya lo dibuja y el mensaje cambia solo.
+ */
+export const NEAR_TOLERANCE_DEG = 25;
+
+/** Hacia dónde apunta la cámara y con qué encuadre. */
+export interface CameraAim {
   /** Azimut al que apunta la cámara, grados desde el norte. */
   cameraAzimuthDeg: number;
   /** Elevación del eje de la cámara, grados. */
@@ -215,6 +221,13 @@ export interface ProjectTargetInput {
   fovHorizontalDeg: number;
   /** Campo visual vertical de la cámara, grados. */
   fovVerticalDeg: number;
+}
+
+export interface ProjectTargetInput extends CameraAim {
+  /** Azimut del objetivo (el Sol en el máximo), grados desde el norte. */
+  targetAzimuthDeg: number;
+  /** Altura del objetivo sobre el horizonte, grados. */
+  targetAltitudeDeg: number;
   /** Tolerancia para considerarlo centrado. Por defecto `ALIGN_TOLERANCE_DEG`. */
   alignToleranceDeg?: number;
 }
@@ -267,4 +280,178 @@ export function projectTarget(input: ProjectTargetInput): ProjectedTarget {
   const aligned = Math.abs(deltaAzimuthDeg) <= tolerance && Math.abs(deltaAltitudeDeg) <= tolerance;
 
   return { deltaAzimuthDeg, deltaAltitudeDeg, xPercent, yPercent, onScreen, aligned };
+}
+
+/** Cómo de lejos está el objetivo de la retícula, en las tres categorías que cambian el mensaje. */
+export type AlignmentState = "aligned" | "near" | "searching";
+
+/**
+ * Traduce la desviación en la única pregunta que le importa al usuario: ¿ya está,
+ * casi, o todavía hay que buscar?
+ *
+ * Se mide con la mayor de las dos desviaciones y no con la distancia angular
+ * combinada porque las dos correcciones se hacen por separado —girar y elevar— y
+ * un objetivo a 3° de rumbo pero 30° de altura no está «a 30° de distancia», está
+ * pendiente de un solo gesto.
+ */
+export function alignmentState(
+  target: Pick<ProjectedTarget, "deltaAzimuthDeg" | "deltaAltitudeDeg">,
+  alignToleranceDeg = ALIGN_TOLERANCE_DEG,
+  nearToleranceDeg = NEAR_TOLERANCE_DEG,
+): AlignmentState {
+  const worst = Math.max(Math.abs(target.deltaAzimuthDeg), Math.abs(target.deltaAltitudeDeg));
+  if (!Number.isFinite(worst)) return "searching";
+  if (worst <= alignToleranceDeg) return "aligned";
+  return worst <= nearToleranceDeg ? "near" : "searching";
+}
+
+/** Una flecha pegada a un borde de la pantalla, con lo que falta en ese eje. */
+export interface EdgeMarker {
+  /** Eje que corrige. El horizontal se arregla girando; el vertical, inclinando. */
+  axis: "horizontal" | "vertical";
+  /** Hacia qué lado hay que moverse. */
+  side: "left" | "right" | "up" | "down";
+  /** Posición del ancla en porcentaje de pantalla, ya recortada dentro del margen. */
+  xPercent: number;
+  yPercent: number;
+  /** Grados que faltan en ese eje, positivos y redondeados al entero. */
+  degrees: number;
+}
+
+/**
+ * Cuánta pantalla hay ocupada por la interfaz en cada borde, en porcentaje.
+ *
+ * No son cuatro márgenes iguales porque la pantalla no es simétrica: arriba están
+ * la hora simulada y las lecturas del objetivo, y abajo la banda de estado con sus
+ * botones. Una flecha centrada en un borde ocupado no se ve, y una flecha que no
+ * se ve es lo mismo que no tener flecha.
+ */
+export interface EdgeInsets {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+/** Márgenes por defecto: los mismos por los cuatro lados. */
+export const DEFAULT_EDGE_INSETS: EdgeInsets = { top: 14, right: 14, bottom: 14, left: 14 };
+
+/**
+ * Flechas de guía: dónde ponerlas y qué deben decir.
+ *
+ * Es la diferencia entre un visor que se usa con el móvil en alto y uno que
+ * obliga a bajarlo para leer un párrafo. Cada eje que se sale de la tolerancia
+ * genera su flecha, anclada al borde hacia el que hay que moverse y a la altura
+ * (o a la anchura) a la que está el objetivo, de modo que dos flechas juntas
+ * señalan la esquina correcta.
+ *
+ * Devuelve una lista vacía cuando ya está centrado, que es la señal de que hay que
+ * enseñar el mensaje de acierto y ninguna flecha.
+ *
+ * **Dos flechas nunca se apilan.** Con el objetivo muy lejos —lo normal al abrir
+ * el visor— las dos anclas se recortan al mismo margen y acaban exactamente en la
+ * misma esquina, así que una tapa a la otra y el usuario ve una sola corrección de
+ * las dos que necesita. Cuando eso va a pasar, cada flecha se lleva al centro de
+ * su borde: la de girar al centro del lado, la de inclinar al centro de arriba o
+ * de abajo. Se pierde la pista diagonal, que solo es útil cuando el objetivo ya
+ * está cerca del encuadre, y a cambio se ven las dos.
+ */
+export function edgeMarkers(
+  target: ProjectedTarget,
+  alignToleranceDeg = ALIGN_TOLERANCE_DEG,
+  insets: EdgeInsets = DEFAULT_EDGE_INSETS,
+): EdgeMarker[] {
+  if (!Number.isFinite(target.deltaAzimuthDeg) || !Number.isFinite(target.deltaAltitudeDeg)) return [];
+
+  const horizontalOut = Math.abs(target.deltaAzimuthDeg) > alignToleranceDeg;
+  const verticalOut = Math.abs(target.deltaAltitudeDeg) > alignToleranceDeg;
+  if (!horizontalOut && !verticalOut) return [];
+
+  const right = target.deltaAzimuthDeg > 0;
+  const up = target.deltaAltitudeDeg > 0;
+
+  // Anclas «pegadas al borde», y la coordenada libre de cada flecha recortada a la
+  // zona de pantalla que no ocupa la interfaz.
+  const anchorX = right ? 100 - insets.right : insets.left;
+  const anchorY = up ? insets.top : 100 - insets.bottom;
+  const freeY = Math.min(100 - insets.bottom, Math.max(insets.top, target.yPercent));
+  const freeX = Math.min(100 - insets.right, Math.max(insets.left, target.xPercent));
+
+  // Separación mínima entre las dos anclas para que las dos flechas se lean.
+  const apart = 25;
+  const collide =
+    horizontalOut && verticalOut && Math.abs(freeX - anchorX) < apart && Math.abs(freeY - anchorY) < apart;
+
+  const midX = (insets.left + (100 - insets.right)) / 2;
+  const midY = (insets.top + (100 - insets.bottom)) / 2;
+
+  const markers: EdgeMarker[] = [];
+
+  if (horizontalOut) {
+    markers.push({
+      axis: "horizontal",
+      side: right ? "right" : "left",
+      xPercent: anchorX,
+      yPercent: collide ? midY : freeY,
+      degrees: Math.round(Math.abs(target.deltaAzimuthDeg)),
+    });
+  }
+
+  if (verticalOut) {
+    markers.push({
+      axis: "vertical",
+      side: up ? "up" : "down",
+      xPercent: collide ? midX : freeX,
+      yPercent: anchorY,
+      degrees: Math.round(Math.abs(target.deltaAltitudeDeg)),
+    });
+  }
+
+  return markers;
+}
+
+/** Una dirección del cielo, sin más. */
+export interface SkyDirection {
+  azimuthDeg: number;
+  altitudeDeg: number;
+}
+
+export interface ProjectedPathPoint {
+  xPercent: number;
+  yPercent: number;
+  onScreen: boolean;
+  /**
+   * El punto queda a más de un cuarto de vuelta del eje de la cámara.
+   *
+   * Ahí la proyección equirrectangular deja de significar nada —el punto está
+   * literalmente detrás— y unir dos puntos a uno y otro lado dibujaría una raya
+   * atravesando la pantalla. El llamante parte la línea por aquí.
+   */
+  behind: boolean;
+}
+
+/**
+ * Proyecta un recorrido entero del cielo sobre la pantalla.
+ *
+ * Es `projectTarget()` aplicado punto a punto, y existe porque el visor no dibuja
+ * solo dónde estará el Sol en el máximo: dibuja **por dónde va a pasar durante
+ * todo el eclipse**. Entre el primer y el último contacto el Sol recorre unos 24°
+ * de azimut y sube casi 30°, así que el tejado que no tapa el máximo puede tapar
+ * perfectamente el principio de la totalidad. Esa es justo la pregunta que el
+ * visor existe para responder.
+ */
+export function projectPath(points: readonly SkyDirection[], camera: CameraAim): ProjectedPathPoint[] {
+  return points.map((point) => {
+    const projected = projectTarget({
+      targetAzimuthDeg: point.azimuthDeg,
+      targetAltitudeDeg: point.altitudeDeg,
+      ...camera,
+    });
+    return {
+      xPercent: projected.xPercent,
+      yPercent: projected.yPercent,
+      onScreen: projected.onScreen,
+      behind: Math.abs(projected.deltaAzimuthDeg) > 90 || Math.abs(projected.deltaAltitudeDeg) > 90,
+    };
+  });
 }

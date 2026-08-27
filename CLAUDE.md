@@ -147,25 +147,57 @@ máximo es **258,8 km** frente a los **257,7 km** de la NASA.
 
 ### El visor solar de realidad aumentada
 
-`/localizador` ofrece, cuando ya hay un resultado, un visor que superpone la posición
-del Sol en el máximo sobre la imagen de la cámara trasera. Sirve para lo que ninguna
-tabla resuelve: si desde ese balcón concreto un edificio se va a interponer.
+`/visor` —y el localizador, cuando ya hay un resultado— superpone sobre la imagen de la
+cámara trasera **el recorrido entero del Sol durante el eclipse**, con los cinco
+contactos marcados. Sirve para lo que ninguna tabla resuelve: si desde ese balcón
+concreto un edificio se va a interponer.
 
-No añade ni un dato nuevo. El azimut y la altura salen del mismo cálculo besseliano;
-`src/lib/eclipse/solar-viewer.ts` solo compara esa dirección con hacia dónde apunta el
-teléfono. Cuatro cosas que no conviene revertir:
+No añade ni un dato nuevo. Las posiciones salen del mismo cálculo besseliano —
+`eclipseTrack()` en `besselian.ts` resuelve la posición del Sol y la fracción de disco
+cubierta para cualquier instante—; `src/lib/eclipse/solar-viewer.ts` solo compara esa
+dirección con hacia dónde apunta el teléfono. Ocho cosas que no conviene revertir:
 
+- **El visor no enseña un instante, enseña el eclipse.** Entre el primer y el último
+  contacto el Sol recorre unos 24° de azimut y sube casi 30°: el tejado que no tapa el
+  máximo puede tapar perfectamente el principio de la totalidad. Enseñar solo el máximo
+  era responder media pregunta. El arco se dibuja y el panel «Momento» salta a
+  cualquiera de los cinco contactos o desliza por toda la ventana.
+- **La guía son flechas, no un párrafo.** Con el móvil en alto apuntando al cielo nadie
+  lee tres líneas de texto: `edgeMarkers()` coloca una flecha por eje desviado, pegada al
+  borde hacia el que hay que moverse y con los grados que faltan. Los ajustes —rumbo
+  manual, corrección de la brújula— viven en un panel que se abre, no ocupando media
+  pantalla mientras se busca el Sol.
+- **Las dos flechas nunca se apilan** y respetan `EdgeInsets`. Con el objetivo lejos las
+  dos anclas se recortan al mismo margen y una tapaba a la otra, así que el usuario veía
+  una sola de las dos correcciones que necesitaba; y una flecha centrada en un borde
+  ocupado por la interfaz no la ve nadie. Las dos cosas están en la función pura y
+  validadas.
+- **Las pantallas completas se montan con un portal en `document.body`.** Un ancestro con
+  `transform` se convierte en el bloque contenedor de sus descendientes `fixed`, y el
+  visor va dentro de una `<section class="reveal">`, que lleva `transform` por su
+  animación de entrada: sin el portal, `fixed inset-0` no cubría la ventana sino la
+  sección, y la cámara salía recortada en media pantalla. **Es la trampa gemela de la de
+  `isolation: isolate`, y aplica a cualquier capa a pantalla completa que se añada dentro
+  de una `.reveal`.**
 - **El rumbo se calcula con los tres ángulos**, no con `360 − alpha`. Esa simplificación
   solo vale con el móvil plano sobre una mesa, y aquí se usa levantado apuntando al cielo.
   En iOS la referencia absoluta es `webkitCompassHeading`, que se convierte a `alpha`
   antes de entrar en la misma matemática.
 - **El modo manual es obligatorio.** Hay móviles sin magnetómetro y WebViews que no
   entregan rumbo absoluto: el visor se abre igual y el rumbo se ajusta a mano. Si en ocho
-  segundos no ha llegado un rumbo absoluto, cambia solo.
+  segundos no ha llegado un rumbo absoluto, cambia solo. La pantalla de calibración lo
+  dice **antes** de encender la cámara: lleva una aguja en vivo y declara si el rumbo que
+  llega es absoluto, con la precisión que reporte el sistema. Ninguna barra de progreso
+  inventada: se enseña lo que el navegador entrega y nada más.
 - **El campo visual es una aproximación declarada**: el navegador no expone la distancia
   focal de forma portable. Está documentado en el módulo y es deliberadamente estrecho.
 - **La cámara no graba nada.** El stream se pinta y se para al cerrar. Sin canvas, sin
   captura y sin subida — y eso es exactamente lo que dice `/privacidad`.
+
+El recorrido **solo trae los puntos con el Sol por encima del horizonte**. La geometría
+besseliana sitúa al observador respecto al cono de sombra sin preguntarse si mira hacia
+el Sol, así que en las antípodas sale un eclipse perfectamente calculado que ocurre bajo
+tierra; dibujarlo sería mandar a alguien a apuntar la cámara al suelo.
 
 ### Margen de error que declaramos
 
@@ -208,7 +240,7 @@ src/
     eclipse/
       besselian.ts         EL CÁLCULO. No tocar sin correr la validación.
       cities.ts            registro de localidades (solo lo no calculable)
-      solar-viewer.ts      geometría del visor AR: rumbo, elevación y proyección
+      solar-viewer.ts      geometría del visor AR: rumbo, elevación, proyección y guía
       event.ts             datos del evento independientes de la localidad
       types.ts
     db/
@@ -494,7 +526,9 @@ secciones de media y ninguna forma de saber qué había dentro sin leerlo entero
   resultado: no se podía enlazar, ni compartir, ni posicionar. Para la función más
   diferencial de la red, ése era el error de producto más caro que había. Se titula
   «¿Me lo tapa ese edificio?» y no «realidad aumentada» a propósito: la tecnología no
-  es el beneficio.
+  es el beneficio. Enseña el **recorrido completo** del Sol con los cinco contactos, no
+  solo el máximo: ver dónde estará el Sol a las 10:47 no dice si el tejado lo tapa a las
+  10:45, y ésa es exactamente la pregunta.
 - **`/publicar`**: un único formulario para las tres cosas que alguien de la ciudad
   quiere dar de alta —su negocio o alojamiento, un acto con fecha, o un anuncio
   entre particulares—. Antes solo existía el alta de clasificados y no había manera
@@ -520,7 +554,10 @@ secciones de media y ninguna forma de saber qué había dentro sin leerlo entero
   de error declarados**, para que un modelo que cite nuestras cifras pueda citar también su
   precisión.
 - API pública en `/api/eclipse` y `/api/circumstances` con CORS abierto: que otros la usen
-  genera enlaces y menciones.
+  genera enlaces y menciones. `/api/circumstances` publica además **`sunTrack`**, la
+  posición del Sol y la fracción de disco cubierta a lo largo de todo el eclipse: es lo que
+  dibuja el visor, cuesta cuatro kilobytes y es la parte de estos datos más difícil de
+  reproducir para quien no resuelva los elementos besselianos.
 - Imagen OG generada al vuelo por ciudad e idioma, solo con primitivas (sin fuentes ni
   imágenes externas: en el borde, cada fetch es un punto de fallo).
 - **Favicon por dominio en `/icon`**, con el acento del tenant y en SVG. Antes no había
@@ -913,6 +950,16 @@ Cosas que conviene no romper:
   Marcar el ápex como principal, igual que en Ceuta.
 - Escribir los perfiles locales de Algeciras, La Línea y Melilla antes de comprar sus
   dominios: un dominio sin `src/content/local/` sirve la guía genérica y no compite.
+- **`circumstancesAt()` da eclipse donde el Sol está bajo el horizonte.** Para Sídney
+  devuelve `isPartial: true` con un 43 % de disco cubierto y el Sol a 49° **por debajo**
+  del horizonte: la geometría besseliana resuelve la posición del observador respecto al
+  cono de sombra sin comprobar que mire hacia el Sol. No afecta a ningún dato publicado
+  —las 35 localidades tienen el Sol entre 25° y 53° de altura— pero sí a `/api/circumstances`
+  y al localizador para quien pregunte desde fuera de la zona. El visor ya lo esquiva
+  (`eclipseTrack()` filtra por altura y devuelve un recorrido vacío), así que lo que falta
+  es decidir la semántica de los dos indicadores: condicionar `isPartial`/`isTotal` a que
+  el Sol esté sobre el horizonte tiene un caso de borde real —un eclipse que empieza antes
+  del orto y se ve a medias— que hay que resolver antes de tocarlo.
 - Mapa interactivo de la franja de totalidad.
 - «Cuánto ganas si bajas X km»: dado un punto, cuántos segundos más de totalidad se
   consiguen desplazándose y en qué dirección. Es *la* pregunta de Cádiz y de Málaga, el
@@ -939,6 +986,73 @@ Cosas que conviene no romper:
 
 Historial de qué se hizo en cada sesión. Se añade por arriba y no se reescribe: la
 verdad vigente del proyecto está en las secciones de antes, no aquí.
+
+### 2026-08-24 — El visor solar deja de marcar un punto y enseña el eclipse entero
+
+- **Qué se hizo:**
+  - **El recorrido del Sol, calculado.** `skyPositionAt()` y `eclipseTrack()` en
+    `src/lib/eclipse/besselian.ts` resuelven la posición del Sol y la fracción de disco
+    cubierta para **cualquier instante**, no solo para el máximo. La conversión de
+    coordenadas horarias a horizontales se extrajo a `horizontalCoordinates()` y ahora la
+    comparten el máximo de las tablas y cada punto del recorrido: tenerla escrita dos veces
+    era la forma segura de que un día el visor apuntase a un sitio y la tabla dijese otro.
+    Para Ceuta el arco va de 85,5° / 24,9° en C1 a 109,5° / 53,0° en C4.
+  - **Tres funciones puras nuevas** en `solar-viewer.ts`: `alignmentState()` (buscando,
+    cerca, alineado), `edgeMarkers()` (las flechas de guía, con `EdgeInsets` por lado) y
+    `projectPath()` (el recorrido proyectado, partido por los puntos que quedan a la
+    espalda). Las tres validadas: `validate-solar-viewer.ts` pasa de 63 a 95 comprobaciones
+    y `validate-eclipse.ts` añade cinco sobre el recorrido, incluida la que compara el
+    máximo del arco con el de las tablas (Δ ≈ 4·10⁻⁷ grados).
+  - **Pantalla del visor rehecha**, con el móvil en alto como caso de uso: hora simulada y
+    salida arriba, las dos lecturas del objetivo en fila debajo, flechas ámbar grandes con
+    los grados que faltan pegadas al borde hacia el que hay que girar, banda de estado
+    abajo y dos paneles que se abren —«Momento» y «Ajustes»—. Los dos deslizadores que
+    antes ocupaban media pantalla se fueron al panel de ajustes.
+  - **Panel «Momento»**: los cinco contactos con su hora, un deslizador por toda la ventana
+    del eclipse y el interruptor del arco. El arco se dibuja con sus contactos marcados, y
+    las etiquetas que se solapan se suprimen —durante la totalidad C2, el máximo y C3 caen
+    en el mismo píxel—.
+  - **Pantalla de calibración** con comprobación en vivo: aguja de brújula, rumbo actual y
+    si lo que llega es rumbo absoluto, más la precisión que declare el sistema. Y el aviso
+    ocular como bloque propio, con el botón principal reconociéndolo.
+  - **Tokens `--viewer-*` en `globals.css`** (regla 10): el visor es la única pantalla que
+    no se dibuja sobre nuestro fondo sino sobre lo que ve la cámara, así que tiene paleta
+    propia y paneles casi opacos. El componente ya no lleva ni un color literal.
+  - **`sunTrack` en `/api/circumstances`**, con hora UTC y local, azimut, altura, cobertura
+    y el contacto de cada punto.
+  - Los pasos de uso de `/visor` en los dos idiomas cuentan lo del recorrido.
+
+- **Decisiones tomadas:**
+  - **El visor enseña el eclipse, no un instante.** Entre C1 y C4 el Sol se desplaza unos
+    24° y sube casi 30°: enseñar solo el máximo respondía media pregunta, porque el tejado
+    que no tapa el máximo puede tapar el principio de la totalidad.
+  - **Nada de barra de calibración inventada.** La referencia que trajo el cliente enseña
+    un «0 % calibrado» que ningún navegador puede medir. Aquí se enseña lo que el sistema
+    entrega —si el rumbo es absoluto y su precisión declarada— y una aguja que se mueve:
+    es la misma comprobación, y es verdad.
+  - **El recorrido solo trae puntos con el Sol sobre el horizonte**, para no dibujar un
+    arco bajo tierra en los puntos donde el cálculo besseliano da eclipse sin comprobar que
+    el observador mire hacia el Sol (ver §13).
+  - Las flechas se separan cuando se apilarían y respetan los márgenes de la interfaz. Las
+    dos reglas viven en la función pura, no en el componente, para poder validarlas.
+
+- **Un fallo de fondo encontrado y corregido:**
+  - **El visor a pantalla completa no cubría la pantalla.** Medido en un navegador real, el
+    diálogo `fixed inset-0` ocupaba desde el píxel 428 hacia abajo en vez de la ventana
+    entera, con la cámara recortada y el header por encima. La causa: un ancestro con
+    `transform` se convierte en el bloque contenedor de sus descendientes `fixed`, y el
+    visor va dentro de una `<section class="reveal">`, cuya animación de entrada deja
+    `transform` puesto. Se resuelve montando las dos pantallas completas con `createPortal`
+    en `document.body`. Es la trampa gemela de la de `isolation: isolate` de la sesión
+    anterior y estaba en producción desde que el visor existe.
+
+- **Pendiente / próximos pasos:**
+  - Decidir la semántica de `isPartial`/`isTotal` cuando el Sol está bajo el horizonte
+    (§13, primer punto): el visor ya lo esquiva, la API todavía no.
+  - Probar el visor en un móvil de verdad: el rumbo se validó con eventos inyectados en
+    Chromium, que comprueba la matemática y la interfaz pero no el magnetómetro ni el campo
+    visual real de la cámara.
+  - El resto sigue en §13.
 
 ### 2026-08-23 — Rediseño de UX/UI completo, tres funciones nuevas, panel de moderación y dos fallos de fondo
 

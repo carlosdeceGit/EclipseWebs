@@ -76,6 +76,33 @@
   /* Alto real del header pegajoso, para que `scroll-margin-top` no esconda los
      anclas debajo de él. Lo actualiza el propio header al contraerse. */
   --header-h: 4.25rem;
+
+  /*
+    Visor de cámara.
+
+    Es la única pantalla de la red que no se dibuja sobre nuestro fondo, sino
+    sobre lo que esté viendo la cámara: un cielo blanco, una fachada clara o una
+    sombra. Por eso tiene paleta propia en vez de heredar la del sitio.
+
+    Dos decisiones que la explican entera:
+
+      - **El acento del tenant no manda aquí.** En el resto de la web distinguir
+        los cuatro dominios por color es un objetivo; sobre la imagen de una
+        cámara, el color es información: ámbar significa «muévete hacia allí» y
+        verde significa «ya está». Que en Gibraltar la flecha fuese de otro tono
+        no ayudaría a nadie a encontrar el Sol.
+      - **Los paneles son casi opacos.** Un panel translúcido bonito sobre un
+        cielo a mediodía deja el texto ilegible justo cuando se está usando.
+  */
+  --viewer-ink: 0 0% 100%;
+  --viewer-ink-dim: 0 0% 82%;
+  --viewer-panel: 224 44% 6% / 0.82;
+  --viewer-panel-strong: 224 44% 6% / 0.94;
+  --viewer-guide: 38 96% 58%;
+  --viewer-target: 48 100% 62%;
+  --viewer-track: 199 92% 68%;
+  --viewer-locked: 152 62% 52%;
+  --viewer-alert: 0 84% 62%;
 }
 
 html {

@@ -11,11 +11,16 @@
 
 import {
   ALIGN_TOLERANCE_DEG,
+  NEAR_TOLERANCE_DEG,
+  alignmentState,
   angleDifference,
   cameraElevation,
   compassHeading,
+  DEFAULT_EDGE_INSETS,
+  edgeMarkers,
   fovForScreenAngle,
   normalizeDegrees,
+  projectPath,
   projectTarget,
 } from "../src/lib/eclipse/solar-viewer";
 
@@ -247,6 +252,156 @@ const ceuta = projectTarget({
 });
 check("caso Ceuta → manda girar 12° a la derecha", near(ceuta.deltaAzimuthDeg, 12, 1e-9), `${ceuta.deltaAzimuthDeg.toFixed(1)}°`);
 check("caso Ceuta → 12° caben en el encuadre de 46°, pero no en la retícula", ceuta.onScreen && !ceuta.aligned);
+
+console.log("\nEstado de alineación\n");
+
+check("centrado → alineado", alignmentState({ deltaAzimuthDeg: 0, deltaAltitudeDeg: 0 }) === "aligned");
+check(
+  "justo en la tolerancia → alineado",
+  alignmentState({ deltaAzimuthDeg: ALIGN_TOLERANCE_DEG, deltaAltitudeDeg: -ALIGN_TOLERANCE_DEG }) === "aligned",
+);
+check(
+  "pasada la tolerancia → cerca",
+  alignmentState({ deltaAzimuthDeg: ALIGN_TOLERANCE_DEG + 0.1, deltaAltitudeDeg: 0 }) === "near",
+);
+check(
+  "justo en el umbral de cercanía → todavía cerca",
+  alignmentState({ deltaAzimuthDeg: NEAR_TOLERANCE_DEG, deltaAltitudeDeg: 0 }) === "near",
+);
+check(
+  "más allá → buscando",
+  alignmentState({ deltaAzimuthDeg: NEAR_TOLERANCE_DEG + 0.1, deltaAltitudeDeg: 0 }) === "searching",
+);
+// Manda el peor de los dos ejes: 3° de rumbo no salvan 40° de altura.
+check(
+  "un solo eje desviado ya saca de alineado",
+  alignmentState({ deltaAzimuthDeg: 3, deltaAltitudeDeg: 40 }) === "searching",
+);
+check("sin lectura → buscando", alignmentState({ deltaAzimuthDeg: NaN, deltaAltitudeDeg: NaN }) === "searching");
+
+console.log("\nFlechas de guía\n");
+
+const aimed = projectTarget({ targetAzimuthDeg: 180, targetAltitudeDeg: 60, ...base });
+check("con el objetivo centrado no hay flechas", edgeMarkers(aimed).length === 0);
+
+// El Sol 30° a la derecha y 20° por encima: dos flechas, derecha y arriba.
+const upperRight = projectTarget({ targetAzimuthDeg: 210, targetAltitudeDeg: 80, ...base });
+const upperRightMarkers = edgeMarkers(upperRight);
+check("desviado en los dos ejes → dos flechas", upperRightMarkers.length === 2);
+check(
+  "a la derecha → flecha derecha con 30°",
+  upperRightMarkers.some((m) => m.side === "right" && m.degrees === 30),
+  upperRightMarkers.map((m) => `${m.side} ${m.degrees}°`).join(" · "),
+);
+check(
+  "por encima → flecha arriba con 20°",
+  upperRightMarkers.some((m) => m.side === "up" && m.degrees === 20),
+);
+check(
+  "la flecha derecha se pega al borde derecho",
+  upperRightMarkers.find((m) => m.axis === "horizontal")?.xPercent === 86,
+);
+check(
+  "las anclas nunca se salen de la pantalla",
+  upperRightMarkers.every((m) => m.xPercent >= 14 && m.xPercent <= 86 && m.yPercent >= 14 && m.yPercent <= 86),
+);
+
+// Media vuelta: el objetivo está detrás y la flecha tiene que seguir señalando un lado.
+const behindMarkers = edgeMarkers(projectTarget({ targetAzimuthDeg: 0, targetAltitudeDeg: 60, ...base }));
+check("con el objetivo a la espalda sigue habiendo flecha", behindMarkers.length === 1);
+check("y no se pasa de media vuelta", behindMarkers[0].degrees === 180);
+
+// El caso de abrir el visor mirando a cualquier sitio: el Sol lejísimos en los dos
+// ejes. Las dos anclas se recortan al mismo margen, así que hay que separarlas o
+// una tapa a la otra y el usuario corrige solo la mitad de lo que le falta.
+const farMarkers = edgeMarkers(projectTarget({ targetAzimuthDeg: 275, targetAltitudeDeg: 130, ...base }));
+check("con el objetivo lejísimos siguen saliendo las dos flechas", farMarkers.length === 2);
+check(
+  "y no se apilan una encima de otra",
+  Math.abs(farMarkers[0].xPercent - farMarkers[1].xPercent) >= 25 ||
+    Math.abs(farMarkers[0].yPercent - farMarkers[1].yPercent) >= 25,
+  farMarkers.map((m) => `${m.side} (${m.xPercent}, ${m.yPercent})`).join(" · "),
+);
+
+// Con el objetivo justo fuera del encuadre las anclas ya están separadas por sí
+// solas, así que se conserva la pista diagonal: la flecha señala la esquina buena.
+const nearMarkers = edgeMarkers(projectTarget({ targetAzimuthDeg: 180 + 26, targetAltitudeDeg: 60 + 6, ...base }));
+check(
+  "cerca del encuadre se conserva la pista diagonal",
+  nearMarkers.length === 2 && nearMarkers[0].yPercent !== 50 && nearMarkers[1].xPercent !== 50,
+  nearMarkers.map((m) => `${m.side} (${m.xPercent.toFixed(0)}, ${m.yPercent.toFixed(0)})`).join(" · "),
+);
+
+// Márgenes por lado: arriba está la hora simulada y abajo la banda de estado, así
+// que una flecha centrada en esos bordes quedaría debajo de la interfaz.
+const asymmetric = edgeMarkers(
+  projectTarget({ targetAzimuthDeg: 275, targetAltitudeDeg: 130, ...base }),
+  ALIGN_TOLERANCE_DEG,
+  { ...DEFAULT_EDGE_INSETS, top: 30, bottom: 36 },
+);
+check(
+  "la flecha de subir respeta el margen de arriba",
+  asymmetric.find((m) => m.axis === "vertical")?.yPercent === 30,
+  asymmetric.map((m) => `${m.side} (${m.xPercent}, ${m.yPercent})`).join(" · "),
+);
+check(
+  "y la de girar se centra en la franja libre, no en media pantalla",
+  asymmetric.find((m) => m.axis === "horizontal")?.yPercent === 47,
+);
+
+// Solo el eje vertical fuera de tolerancia: una única flecha, hacia abajo.
+const belowMarkers = edgeMarkers(projectTarget({ targetAzimuthDeg: 180, targetAltitudeDeg: 40, ...base }));
+check("solo la altura desviada → una sola flecha", belowMarkers.length === 1 && belowMarkers[0].side === "down");
+
+console.log("\nRecorrido del Sol\n");
+
+const camera = { cameraAzimuthDeg: 95, cameraAltitudeDeg: 38, ...fov };
+// Tres puntos del recorrido real de Ceuta: primer contacto, máximo y último contacto.
+const path = projectPath(
+  [
+    { azimuthDeg: 85.5, altitudeDeg: 24.9 },
+    { azimuthDeg: 95.4, altitudeDeg: 38.4 },
+    { azimuthDeg: 109.5, altitudeDeg: 53.0 },
+  ],
+  camera,
+);
+check("un punto proyectado por cada punto del recorrido", path.length === 3);
+check("el máximo cae dentro del encuadre", path[1].onScreen);
+check("el primer contacto queda abajo a la izquierda", path[0].xPercent < 50 && path[0].yPercent > 50);
+check("el último contacto queda arriba a la derecha", path[2].xPercent > 50 && path[2].yPercent < 50);
+// Apuntando al máximo, el eclipse entero de Ceuta —dos horas y veinte de recorrido—
+// cabe en un solo encuadre. Es lo que hace que dibujar el arco valga la pena: se ve
+// de un vistazo si el tejado se cruza en algún momento, no solo en el máximo.
+check("apuntando al máximo cabe el eclipse entero en el encuadre", path.every((point) => point.onScreen));
+
+// Apuntando al primer contacto, el último ya se sale por arriba a la derecha.
+const fromFirst = projectPath(
+  [
+    { azimuthDeg: 85.5, altitudeDeg: 24.9 },
+    { azimuthDeg: 109.5, altitudeDeg: 53.0 },
+  ],
+  { cameraAzimuthDeg: 85.5, cameraAltitudeDeg: 24.9, ...fov },
+);
+check("desde el primer contacto, el último se sale del encuadre", !fromFirst[1].onScreen);
+check(
+  "se sale por el lado derecho, todavía dentro de la franja alta",
+  fromFirst[1].xPercent > 100 && fromFirst[1].yPercent > 0 && fromFirst[1].yPercent < 50,
+  `${fromFirst[1].xPercent.toFixed(1)}%, ${fromFirst[1].yPercent.toFixed(1)}%`,
+);
+check("ningún punto del recorrido queda detrás de la cámara", path.every((point) => !point.behind));
+check(
+  "el recorrido sube de izquierda a derecha, como el Sol por la mañana",
+  path[0].xPercent < path[1].xPercent && path[1].xPercent < path[2].xPercent && path[0].yPercent > path[2].yPercent,
+);
+
+// Mirando al oeste, el recorrido del este queda a la espalda y hay que cortar la línea.
+const backwards = projectPath([{ azimuthDeg: 95, altitudeDeg: 38 }], { ...camera, cameraAzimuthDeg: 275 });
+check("con el recorrido a la espalda se marca como detrás", backwards[0].behind);
+
+check(
+  "proyectar un punto suelto y proyectarlo dentro del recorrido da lo mismo",
+  near(path[1].xPercent, projectTarget({ targetAzimuthDeg: 95.4, targetAltitudeDeg: 38.4, ...camera }).xPercent, 1e-12),
+);
 
 console.log(
   failures === 0
